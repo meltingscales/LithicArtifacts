@@ -24,8 +24,9 @@ WALL_JUMP_CD  = 24    # frames before same-side wall jump allowed again
 BULLET_SPEED   = 5.0
 SHOOT_COOLDOWN = 12
 
-P_W = TILE
-P_H = TILE * 2
+P_W       = TILE
+P_H       = TILE * 2
+P_HIT_INS = 1       # horizontal inset for floor/ceiling checks; lets player slip into 1-tile gaps
 
 
 class World:
@@ -217,8 +218,8 @@ class Game:
     def _move_y(self, p):
         p.y += p.vy
         p.on_ground = False
-        lc = int(p.x // TILE)
-        rc = int((p.right - 1) // TILE)
+        lc = int((p.x + P_HIT_INS) // TILE)
+        rc = int((p.right - 1 - P_HIT_INS) // TILE)
         if p.vy < 0:
             tr = int(p.y // TILE)
             if self.world.solid(lc, tr) or self.world.solid(rc, tr):
