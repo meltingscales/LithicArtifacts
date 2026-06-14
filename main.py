@@ -182,8 +182,10 @@ class Game:
             p.y  = float(top_row * TILE)
             p.x  = float((wall_col * TILE - P_W) if wall_dir == 1
                          else (wall_col + 1) * TILE)
-            p.vx = 0.0
-            p.vy = 0.0
+            p.vx     = 0.0
+            p.vy     = 0.0
+            p.aim_dx = -wall_dir   # default: aim away from wall
+            p.aim_dy = 0
             return True
         return False
 
@@ -262,14 +264,31 @@ class Game:
         if p.wj_cd_r  > 0: p.wj_cd_r  -= 1
 
         if p.state == "hanging":
-            if self._up() or jump:
-                # Launch upward and inward to land on top of the ledge
-                p.state = "normal"
-                p.vy    = JUMP_VEL * 0.75
-                p.vx    = p.hang_wall * MOVE_SPEED
-            elif self._down() or (adx != 0 and adx == -p.hang_wall):
-                p.state = "normal"
-                p.vy    = 0.5
+            p.aim_locked = self._aim_lock()
+            if p.aim_locked:
+                # Aim is constrained to 5 directions: up, down, straight-away,
+                # diag-up-away, diag-down-away (nothing toward/into the wall).
+                free = -p.hang_wall
+                ady  = (-1 if self._up() else 0) + (1 if self._down() else 0)
+                if adx == free:
+                    p.aim_dx = free
+                elif adx != 0:      # pressing into wall → neutral horizontal
+                    p.aim_dx = 0
+                if adx != 0 or ady != 0:
+                    p.aim_dy = ady
+                if jump:
+                    p.state = "normal"
+                    p.vy    = JUMP_VEL * 0.75
+                    p.vx    = p.hang_wall * MOVE_SPEED
+            else:
+                if self._up() or jump:
+                    # Launch upward and inward to land on top of the ledge
+                    p.state = "normal"
+                    p.vy    = JUMP_VEL * 0.75
+                    p.vx    = p.hang_wall * MOVE_SPEED
+                elif self._down() or (adx != 0 and adx == -p.hang_wall):
+                    p.state = "normal"
+                    p.vy    = 0.5
         else:
             p.aim_locked = self._aim_lock()
 
