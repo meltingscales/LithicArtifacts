@@ -2,7 +2,7 @@
 
 ## Bugs
 
-None yet.
+- Cave generation is a bit too sparse, the world feels empty. Bump it up a little bit.
 
 ## Artifacts
 - Fractal Blaster: piercing shots that trace a constantly-shifting Julia set outline
@@ -21,7 +21,7 @@ None yet.
 
 ## Visuals/Aesthetic
 
-- Moving should leave an afterimage/trail behind you, Castlevania: Symphony of the Night - similar to the trail effect seen in Castlevania: Symphony of the Night.  <https://www.youtube.com/watch?v=qmDrNeoD2X0> - see LithicArtifacts/art-direction/sotn-trail.png
+- New Artifact: Vampiric Cape (gives change for heal on kills), also does this: Moving should leave an afterimage/trail behind you, Castlevania: Symphony of the Night - similar to the trail effect seen in Castlevania: Symphony of the Night.  <https://www.youtube.com/watch?v=qmDrNeoD2X0> - see LithicArtifacts/art-direction/sotn-trail.png
 
 ## Other
 - Make sure assets/ is included in .spec file

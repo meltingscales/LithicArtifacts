@@ -637,6 +637,15 @@ class Game:
             return False
         top_row = int(p.y // TILE)
         if blocking_row == top_row + 1 and not self.world.solid(wall_col, top_row):
+            # Don't grab a single-block obstacle sitting on solid ground.
+            # If the floor exists at blocking_row+1 under the player's column,
+            # this ledge is only 1 tile tall and the player can just walk past it.
+            lc = int((p.x + P_HIT_INS) // TILE)
+            rc = int((p.right - 1 - P_HIT_INS) // TILE)
+            if self.world.solid(lc, blocking_row + 1) or self.world.solid(  # fmt: skip
+                rc, blocking_row + 1
+            ):
+                return False
             p.state = "hanging"
             p.hang_wall = wall_dir
             p.y = float(top_row * TILE)
@@ -866,10 +875,12 @@ class Game:
                 # Aim: facing + vertical modifier
                 p.aim_dx = p.facing
                 # fmt: off
-                if self._up() and adx != 0:
-                    p.aim_dy = -1   # diagonal up while running
+                if self._up():
+                    p.aim_dy = -1            # up: diagonal when running, straight up when standing
+                    if adx == 0:
+                        p.aim_dx = 0         # standing still → shoot straight up
                 elif self._down() and (adx != 0 or not p.on_ground):
-                    p.aim_dy = 1    # diagonal/straight down while running or airborne
+                    p.aim_dy = 1             # diagonal/straight down while running or airborne
                 # fmt: on
                 else:
                     p.aim_dy = 0
