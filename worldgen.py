@@ -91,9 +91,9 @@ def gen_section(rng, abs_start_row, entry_free_l, entry_free_r, artifact_cls=Non
         # fmt: on
 
     if stype == "platforms":
-        _gen_platforms(rng, tiles, abs_start_row, free_l, free_r, density=0.22)
+        _gen_platforms(rng, tiles, abs_start_row, free_l, free_r, density=0.32)
     elif stype == "open":
-        _gen_platforms(rng, tiles, abs_start_row, free_l, free_r, density=0.08)
+        _gen_platforms(rng, tiles, abs_start_row, free_l, free_r, density=0.14)
     elif stype == "cave":
         for attempt in range(_CAVE_MAX_RETRIES):
             cave_tiles = {}
@@ -186,7 +186,7 @@ def _gen_cave(rng, tiles, abs_start, free_l, free_r):
     oy = rng.uniform(0, 1000)
     # fmt: off
     scale     = 0.18   # spatial frequency — higher = smaller features
-    threshold = 0.10   # pnoise2 values above this → solid cave rock (~42% fill)
+    threshold = -0.05  # pnoise2 values above this → solid cave rock (~52% fill)
     # fmt: on
     for r in range(_SECTION_H):
         row = abs_start + r

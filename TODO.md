@@ -2,7 +2,7 @@
 
 ## Bugs
 
-- Cave generation is a bit too sparse, the world feels empty. Bump it up a little bit.
+None yet.
 
 ## Artifacts
 - Fractal Blaster: piercing shots that trace a constantly-shifting Julia set outline
