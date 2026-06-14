@@ -146,6 +146,7 @@ class Player:
         self.wj_cd_r      = 0
         self.ledge_cd     = 0
         self.burrowing    = False
+        self.crouching    = False
         self.artifacts    = []
         self.hp           = 10
         self.max_hp       = 10
@@ -154,11 +155,11 @@ class Player:
     @property
     def right(self):  return self.x + P_W
     @property
-    def bottom(self): return self.y + P_H
+    def bottom(self): return self.y + (TILE if self.crouching else P_H)
     @property
     def gun_x(self):  return self.x + P_W / 2
     @property
-    def gun_y(self):  return self.y + P_H / 4
+    def gun_y(self):  return self.y + (2 if self.crouching else P_H // 4)
 
 
 DEBUG_ITEMS = [
@@ -245,7 +246,8 @@ class Game:
             a for row in self.body_grid for a in row if a is not None
         ]
         if not any(isinstance(a, SpiralBorer) for a in self.player.artifacts):
-            self.player.burrowing = False
+            self.player.burrowing  = False
+            self.player.crouching  = False
 
     # -- pick / place helpers --
 
@@ -483,7 +485,7 @@ class Game:
     # ---- physics ----
 
     def _occupied_rows(self, p):
-        return range(int(p.y // TILE), int((p.y + P_H - 1) // TILE) + 1)
+        return range(int(p.y // TILE), int((p.bottom - 1) // TILE) + 1)
 
     def _try_ledge_grab(self, p, wall_col, blocking_row, wall_dir):
         """Grab when bottom tile hits wall but top tile is open."""
@@ -542,7 +544,7 @@ class Game:
         else:
             br = int(p.bottom // TILE)
             if self.world.solid(lc, br) or self.world.solid(rc, br):
-                p.y         = float(br * TILE - P_H)
+                p.y         = float(br * TILE - (TILE if p.crouching else P_H))
                 p.vy        = 0.0
                 p.on_ground = True
                 p.jump_type = "none"
@@ -553,7 +555,7 @@ class Game:
             p.wall_contact = 0
             return
         tr = int(p.y // TILE)
-        br = int((p.y + P_H - 1) // TILE)
+        br = int((p.bottom - 1) // TILE)
         lc = int(p.x // TILE) - 1
         rc = int(p.right // TILE)
         for row in range(tr, br + 1):
@@ -590,9 +592,11 @@ class Game:
             self.paused = True
             return
 
-        p    = self.player
-        adx  = (-1 if self._left() else 0) + (1 if self._right() else 0)
-        jump = self._jump()
+        p      = self.player
+        adx    = (-1 if self._left() else 0) + (1 if self._right() else 0)
+        jump   = self._jump()
+        down_p = (pyxel.btnp(pyxel.KEY_DOWN) or pyxel.btnp(pyxel.KEY_J) or
+                  pyxel.btnp(pyxel.GAMEPAD1_BUTTON_DPAD_DOWN))
 
         if p.shoot_cd > 0: p.shoot_cd -= 1
         if p.wj_cd_l  > 0: p.wj_cd_l  -= 1
@@ -604,6 +608,8 @@ class Game:
             "left":  self._left(),  "right": self._right(),
             "up":    self._up(),    "down":  self._down(),
             "jump":  jump,          "shoot": self._shoot(),
+            "burrow": (pyxel.btn(pyxel.KEY_C) or
+                       pyxel.btn(pyxel.GAMEPAD1_BUTTON_Y)),
         }
         for a in p.artifacts:
             a.on_frame(p, self.world, inputs)
@@ -637,7 +643,30 @@ class Game:
         else:
             p.aim_locked = self._aim_lock()
 
-            if p.aim_locked:
+            if p.crouching:
+                # Crouching: stationary; left/right only updates facing
+                p.vx = 0.0
+                if self._left():  p.facing = -1
+                if self._right(): p.facing = 1
+                if p.aim_locked:
+                    ady = (-1 if self._up() else 0) + (1 if self._down() else 0)
+                    if adx != 0 or ady != 0:
+                        p.aim_dx = adx
+                        p.aim_dy = ady
+                else:
+                    # No lock: shoot straight forward from the crouched position
+                    p.aim_dx = p.facing
+                    p.aim_dy = 0
+                # Toggle off: Down press → stand up if headroom allows
+                if down_p:
+                    tr = int(p.y // TILE) - 1
+                    lc = int((p.x + P_HIT_INS) // TILE)
+                    rc = int((p.right - 1 - P_HIT_INS) // TILE)
+                    if tr < 0 or not (self.world.solid(lc, tr) or
+                                      self.world.solid(rc, tr)):
+                        p.y        -= TILE
+                        p.crouching = False
+            elif p.aim_locked:
                 # Freeze horizontal movement; direction keys control aim
                 p.vx = 0.0
                 ady  = (-1 if self._up() else 0) + (1 if self._down() else 0)
@@ -655,8 +684,13 @@ class Game:
                 # Aim: facing direction; diagonal-up only with up + horizontal
                 p.aim_dx = p.facing
                 p.aim_dy = -1 if (self._up() and adx != 0) else 0
+                # Toggle crouch on: Down press while on ground, not burrowing
+                if p.on_ground and down_p and not p.burrowing:
+                    p.y        += TILE
+                    p.crouching = True
+                    p.vx        = 0.0
 
-            if jump and not p.burrowing:
+            if jump and not p.burrowing and not p.crouching:
                 if p.on_ground:
                     p.vy        = JUMP_VEL
                     p.on_ground = False
@@ -786,6 +820,8 @@ class Game:
         elif p.state == "hanging":
             pyxel.text(px + 2, py + 1,        "@", YELLOW)
             pyxel.text(px + 2, py + TILE + 1, "n", YELLOW)
+        elif p.crouching:
+            pyxel.text(px + 2, py + 1, "@", YELLOW)
         elif p.burrowing:
             pyxel.text(px + 2, py + 1,        "@", YELLOW)
             pyxel.text(px + 2, py + TILE + 1, "v", YELLOW)

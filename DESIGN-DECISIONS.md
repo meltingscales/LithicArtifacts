@@ -19,6 +19,14 @@ Direction keys control aim angle while locked; an orange reticle shows the aimed
 Releasing aim lock restores movement. Can still jump while locked.
 Without lock, aim is always the facing direction (or diagonal-up with up + horizontal).
 
+**Crouch.**
+Press Down to toggle crouch; press Down again to stand (blocked if a ceiling is directly above).
+While crouching the player is 1 tile tall (hitbox top shifts down, feet stay anchored).
+Movement is locked to zero — left/right only updates facing.
+Without aim lock, shooting fires horizontally from the crouched gun position (lower than standing).
+With aim lock, full directional aim is available (same 8-way system as standing).
+Jump and wall-jump are blocked while crouching; burrow (Spiral Borer) requires crouching + C/Y.
+
 **Ledge grab.**
 When the player's bottom tile collides with a wall edge mid-air and the top tile is in open space,
 the player grabs the ledge and enters a hanging state (`@`/`n`).
@@ -83,8 +91,10 @@ Rationale: GBA aesthetic implies D-pad primacy.
 |---|---|---|
 | Move | arrows / hjkl | D-pad |
 | Jump | space / up / K | A or B |
+| Crouch (toggle) | down / J | D-pad Down |
 | Shoot | Z | X |
 | Aim lock (hold) | X | LB |
+| Burrow (while crouching) | C | Y |
 | Quit | Q | — |
 
 ---

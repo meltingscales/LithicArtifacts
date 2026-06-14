@@ -6,8 +6,10 @@
 |---|---|---|
 | Move | Arrows / hjkl | D-pad |
 | Jump | Space / Up / K | A or B |
+| Crouch (toggle) | Down / J | D-pad Down |
 | Shoot | Z | X |
 | Aim lock (hold) | X | LB |
+| Burrow (while crouching) | C | Y |
 | Body panel | Tab | Start |
 | Quit | Q | — |
 
