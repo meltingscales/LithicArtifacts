@@ -113,6 +113,7 @@ class Player:
         self.wall_contact = 0        # 1=right, -1=left, 0=none
         self.wj_cd_l      = 0
         self.wj_cd_r      = 0
+        self.ledge_cd     = 0
 
     @property
     def right(self):  return self.x + P_W
@@ -173,7 +174,7 @@ class Game:
 
     def _try_ledge_grab(self, p, wall_col, blocking_row, wall_dir):
         """Grab when bottom tile hits wall but top tile is open."""
-        if p.on_ground or p.state == "hanging":
+        if p.on_ground or p.state == "hanging" or p.ledge_cd > 0:
             return False
         top_row = int(p.y // TILE)
         if blocking_row == top_row + 1 and not self.world.solid(wall_col, top_row):
@@ -262,6 +263,7 @@ class Game:
         if p.shoot_cd > 0: p.shoot_cd -= 1
         if p.wj_cd_l  > 0: p.wj_cd_l  -= 1
         if p.wj_cd_r  > 0: p.wj_cd_r  -= 1
+        if p.ledge_cd > 0: p.ledge_cd -= 1
 
         if p.state == "hanging":
             p.aim_locked = self._aim_lock()
@@ -277,18 +279,21 @@ class Game:
                 if adx != 0 or ady != 0:
                     p.aim_dy = ady
                 if jump:
-                    p.state = "normal"
-                    p.vy    = JUMP_VEL * 0.75
-                    p.vx    = p.hang_wall * MOVE_SPEED
+                    p.state    = "normal"
+                    p.ledge_cd = 6
+                    p.vy       = JUMP_VEL * 0.75
+                    p.vx       = p.hang_wall * MOVE_SPEED
             else:
                 if self._up() or jump:
                     # Launch upward and inward to land on top of the ledge
-                    p.state = "normal"
-                    p.vy    = JUMP_VEL * 0.75
-                    p.vx    = p.hang_wall * MOVE_SPEED
+                    p.state    = "normal"
+                    p.ledge_cd = 6
+                    p.vy       = JUMP_VEL * 0.75
+                    p.vx       = p.hang_wall * MOVE_SPEED
                 elif self._down() or (adx != 0 and adx == -p.hang_wall):
-                    p.state = "normal"
-                    p.vy    = 0.5
+                    p.state    = "normal"
+                    p.ledge_cd = 6
+                    p.vy       = 0.5
         else:
             p.aim_locked = self._aim_lock()
 
