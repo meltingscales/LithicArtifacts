@@ -9,3 +9,7 @@
 - Player HP / death / respawn
 - Floors / progression (dungeon rooms, descending structure)
 - Artifact pickups in the world (player walks over them → goes to inventory)
+
+## Worldgen
+
+TODO, see `worldgen.py`...
