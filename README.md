@@ -4,6 +4,8 @@ A tiny roguelike about finding cursed body modifications and breaking yourself i
 
 Inspired by **Caves of Qud**, **Metroid Fusion**, **the original Rogue**, and **LithicRivers**.
 
+See [DESIGN-DECISIONS.md](DESIGN-DECISIONS.md) for locked design decisions and rationale.
+
 ---
 
 ## Concept
@@ -69,5 +71,5 @@ Early concept. Not yet started.
 | Caves of Qud | Body modification system, emergent mutation interactions |
 | Metroid Fusion | Body horror aesthetic, organism absorption, sense of dread |
 | Rogue (1980) | Austerity, random item discovery, permadeath |
-| LithicRivers | Aesthetic sensibility, terminal-forward thinking |
+| [LithicRivers](https://github.com/meltingscales/LithicRivers/) | Aesthetic sensibility, terminal-forward thinking |
 | Noita | Rewarding the player for breaking the game |
