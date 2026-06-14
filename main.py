@@ -4,6 +4,7 @@ import random
 
 from artifacts import SpiralBorer
 from enemies   import Crawler, Flyer, ShootyFlier, EnemyBullet
+from worldgen  import gen_section, SECTION_H
 
 SCREEN_W = 240
 SCREEN_H = 160
@@ -41,54 +42,68 @@ P_W       = TILE
 P_H       = TILE * 2
 P_HIT_INS = 1       # horizontal inset for floor/ceiling checks; lets player slip into 1-tile gaps
 
+PREAMBLE_ROWS  = 15                # hardcoded entrance rows; sections begin here
+_ARTIFACT_POOL = [SpiralBorer]     # artifact classes that can appear as world pickups
+
 
 class World:
     def __init__(self, seed=0):
         self.tiles          = {}
         self.rng            = random.Random(seed)
-        self._gen_to        = -1
-        self.pending_spawns = []   # list of (px_x, px_y, type_str) drained by Game
-        self._gen(80)
+        self.pending_spawns = []   # [(px_x, px_y, type_str)] drained by Game each frame
+        self.pickups        = []   # [WorldPickup] persistent world items
+        self._gen_sections  = 0    # number of sections generated so far
+        self._free_l        = COLS // 4        # initial corridor bounds
+        self._free_r        = 3 * COLS // 4
+        self._next_art_sec  = self.rng.randint(1, 3)   # section index for first artifact
 
-    def _gen(self, up_to):
-        for y in range(self._gen_to + 1, up_to + 1):
-            self.tiles[(0, y)]        = 1
-            self.tiles[(COLS - 1, y)] = 1
-            if y == 0:
-                for x in range(COLS):
-                    self.tiles[(x, y)] = 1
-            elif y == 8:
-                gap = self.rng.randint(5, COLS - 10)
-                for x in range(1, COLS - 1):
-                    if not (gap <= x < gap + 5):
-                        self.tiles[(x, y)] = 1
-            elif y > 14 and self.rng.random() < 0.12:
-                gap   = self.rng.randint(2, COLS - 9)
-                gap_w = self.rng.randint(4, 8)
-                for x in range(1, COLS - 1):
-                    if not (gap <= x < gap + gap_w):
-                        self.tiles[(x, y)] = 1
-                # Maybe spawn an enemy on the new platform (skip very top)
-                if y > 22 and self.rng.random() < 0.45:
-                    solid = [x for x in range(1, COLS - 1)
-                             if not (gap <= x < gap + gap_w)]
-                    if len(solid) >= 2:
-                        sc = self.rng.choice(solid)
-                        r  = self.rng.random()
-                        if r < 0.5:
-                            self.pending_spawns.append(
-                                (sc * TILE, (y - 1) * TILE, "crawler"))
-                        elif r < 0.8:
-                            self.pending_spawns.append(
-                                (sc * TILE, (y - 4) * TILE, "flyer"))
-                        else:
-                            self.pending_spawns.append(
-                                (sc * TILE, (y - 4) * TILE, "shooty_flier"))
-        self._gen_to = up_to
+        # Hardcoded entrance (rows 0 – PREAMBLE_ROWS-1)
+        for x in range(COLS):          # solid ceiling
+            self.tiles[(x, 0)] = 1
+        for y in range(1, PREAMBLE_ROWS):  # boundary walls only
+            self.tiles[(0, y)]          = 1
+            self.tiles[(COLS - 1, y)]   = 1
+        gap = self.rng.randint(5, COLS - 10)
+        for x in range(1, COLS - 1):  # first platform at row 8
+            if not (gap <= x < gap + 5):
+                self.tiles[(x, 8)] = 1
+
+        # Pre-generate several sections so the player never hits a blank wall
+        self._gen_up_to(4)
+
+    # ---- section generation ----
+
+    def _pick_artifact_cls(self):
+        if self._gen_sections < self._next_art_sec:
+            return None
+        cls = self.rng.choice(_ARTIFACT_POOL)
+        self._next_art_sec = self._gen_sections + self.rng.randint(3, 6)
+        return cls
+
+    def _gen_up_to(self, n_sections):
+        """Generate sections until at least n_sections exist."""
+        while self._gen_sections < n_sections:
+            abs_start = PREAMBLE_ROWS + self._gen_sections * SECTION_H
+            art_cls   = self._pick_artifact_cls()
+            tiles, spawns, pickup_spec, fl, fr = gen_section(
+                self.rng, abs_start, self._free_l, self._free_r, art_cls
+            )
+            self.tiles.update(tiles)
+            self.pending_spawns.extend(spawns)
+            if pickup_spec is not None:
+                col, row, cls = pickup_spec
+                self.pickups.append(WorldPickup(col * TILE, row * TILE, cls))
+            self._free_l       = fl
+            self._free_r       = fr
+            self._gen_sections += 1
 
     def ensure_gen(self, row):
-        if row > self._gen_to:
-            self._gen(row + 40)
+        """Ensure the dungeon is generated at least two full sections beyond row."""
+        if row <= PREAMBLE_ROWS:
+            return
+        needed = (row - PREAMBLE_ROWS) // SECTION_H + 2
+        if needed > self._gen_sections:
+            self._gen_up_to(needed)
 
     def solid(self, col, row):
         return self.tiles.get((int(col), int(row)), 0) == 1
@@ -124,6 +139,29 @@ class Bullet:
         sy = int(self.y - cam)
         if 0 <= sy < SCREEN_H:
             pyxel.rect(int(self.x), sy, 2, 2, ORANGE)
+
+
+class WorldPickup:
+    """An artifact resting in the world on a pedestal, waiting to be collected."""
+
+    def __init__(self, x, y, artifact_cls):
+        self.x            = float(x)
+        self.y            = float(y)
+        self.artifact_cls = artifact_cls
+        self.collected    = False
+
+    @property
+    def right(self):  return self.x + TILE
+    @property
+    def bottom(self): return self.y + TILE
+
+    def draw(self, cam):
+        sy = int(self.y - cam)
+        if not (-TILE <= sy < SCREEN_H):
+            return
+        col = YELLOW if (pyxel.frame_count // 8) % 2 else ORANGE
+        pyxel.rectb(int(self.x), sy, TILE, TILE, col)
+        pyxel.text(int(self.x) + 2, sy + 1, self.artifact_cls.glyph, YELLOW)
 
 
 class Player:
@@ -181,7 +219,8 @@ class Game:
         self.enemy_bullets = []
         self.held         = None              # artifact currently being moved
         self.held_src     = None              # ("body", r, c) | ("inv", i)
-        self.paused       = False
+        self.paused           = False
+        self.pickup_dialogue  = None          # ArtifactClass while pickup dialogue is open
         self.pause_panel  = 0                 # 0 = body, 1 = inventory
         self.body_cursor  = [0, 0]            # [row, col]
         self.inv_cursor   = 0
@@ -248,6 +287,27 @@ class Game:
         if not any(isinstance(a, SpiralBorer) for a in self.player.artifacts):
             self.player.burrowing  = False
             self.player.crouching  = False
+
+    # ---- pickup dialogue ----
+
+    def _update_pickup_dialogue(self):
+        if (pyxel.btnp(pyxel.KEY_Z) or
+                pyxel.btnp(pyxel.GAMEPAD1_BUTTON_X) or
+                pyxel.btnp(pyxel.KEY_RETURN)):
+            self.pickup_dialogue = None
+
+    def _draw_pickup_dialogue(self, cls):
+        pw, ph = 204, 92
+        px0 = (SCREEN_W - pw) // 2
+        py0 = (SCREEN_H - ph) // 2
+        pyxel.rect(px0, py0, pw, ph, BLACK)
+        pyxel.rectb(px0, py0, pw, ph, YELLOW)
+        pyxel.text(px0 + 4, py0 + 5,  "ARTIFACT FOUND", ORANGE)
+        pyxel.line(px0 + 1, py0 + 14, px0 + pw - 2, py0 + 14, DARK_GRAY)
+        pyxel.text(px0 + 4, py0 + 20, f"{cls.glyph}  {cls.name}", YELLOW)
+        for i, ln in enumerate(self._wrap(cls.description, 46)[:3]):
+            pyxel.text(px0 + 4, py0 + 34 + i * 10, ln, LIGHT_GRAY)
+        pyxel.text(px0 + 4, py0 + ph - 11, "Z / X  continue", DARK_GRAY)
 
     # -- pick / place helpers --
 
@@ -573,6 +633,11 @@ class Game:
         if pyxel.btnp(pyxel.KEY_Q):
             pyxel.quit()
 
+        # Pickup dialogue takes highest priority (freezes all gameplay)
+        if self.pickup_dialogue is not None:
+            self._update_pickup_dialogue()
+            return
+
         # Pause takes input priority; Tab/Start opens it from gameplay
         if self.paused:
             self._update_pause()
@@ -783,10 +848,21 @@ class Game:
                         eb.alive = False
                         break
 
+        # Pickup collection
+        for pu in self.world.pickups:
+            if not pu.collected and (
+                    p.x < pu.right and p.right > pu.x and
+                    p.y < pu.bottom and p.bottom > pu.y):
+                pu.collected         = True
+                self.inventory.append(pu.artifact_cls())
+                self.pickup_dialogue = pu.artifact_cls
+                break
+
         # Cull dead / off-screen-above objects
         cull_y = self.cam_y - SCREEN_H * 3
         self.enemies       = [e  for e  in self.enemies       if e.alive  and e.y  > cull_y]
         self.enemy_bullets = [eb for eb in self.enemy_bullets if eb.alive and eb.y > cull_y]
+        self.world.pickups = [pu for pu in self.world.pickups if not pu.collected and pu.y > cull_y]
 
         self.world.ensure_gen(int(p.bottom // TILE) + 40)
 
@@ -820,6 +896,9 @@ class Game:
 
         for e in self.enemies:
             e.draw(cam)
+
+        for pu in self.world.pickups:
+            pu.draw(cam)
 
         p  = self.player
         px = int(p.x)
@@ -858,7 +937,9 @@ class Game:
             col = YELLOW if i < p.hp else DARK_GRAY
             pyxel.rect(4 + i * 5, SCREEN_H - 8, 4, 4, col)
 
-        if self.debug_open:
+        if self.pickup_dialogue is not None:
+            self._draw_pickup_dialogue(self.pickup_dialogue)
+        elif self.debug_open:
             self._draw_debug()
 
 

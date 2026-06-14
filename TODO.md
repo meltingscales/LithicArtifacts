@@ -5,15 +5,14 @@
 - Ice Missiles: [TBD]
 
 ## Gameplay
-- Enemies (see `enemies.py`)
 - Player HP / death / respawn
-- Floors / progression (dungeon rooms, descending structure)
-- Artifact pickups in the world (player walks over them → goes to inventory)
-
-## Distribution
-- Write `lithic_artifacts.spec` (PyInstaller spec file) for bundling into a standalone binary
-  - `just build` is already wired up to run it
+- Floors / progression (floor counter, difficulty scaling)
 
 ## Worldgen
+- Organic cave variety (more section types: shafts, puzzle chambers)
+- Floor/biome transitions after every N sections
+- Difficulty scaling: denser spawns + harder enemies deeper down
 
-TODO, see `worldgen.py`...
+## Artifacts
+- Fractal Blaster: piercing shots that trace a constantly-shifting Julia set outline
+- Ice Missiles: [TBD]
