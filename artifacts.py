@@ -40,7 +40,7 @@ class SpiralBorer(Artifact):
         if player.burrowing:
             if self._emerged(player, world):
                 player.burrowing = False
-        elif player.on_ground and inputs["down"]:
+        elif player.on_ground and inputs["down"] and not player.aim_locked:
             player.burrowing = True
             player.on_ground = False
             player.vy        = 1.0   # seed downward velocity into the floor
