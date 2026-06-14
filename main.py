@@ -3,7 +3,7 @@ import pyxel
 import random
 
 # fmt: off
-from artifacts import SpiralBorer, Wallbreaker
+from artifacts import SpiralBorer, VampiricCape, Wallbreaker
 from enemies   import Crawler, Flyer, ShootyFlier, EnemyBullet
 from worldgen  import gen_section, SECTION_H
 # fmt: on
@@ -48,7 +48,7 @@ P_H       = TILE * 2
 P_HIT_INS = 1       # horizontal inset for floor/ceiling checks; lets player slip into 1-tile gaps
 
 PREAMBLE_ROWS  = 15                          # hardcoded entrance rows; sections begin here
-_ARTIFACT_POOL = [SpiralBorer, Wallbreaker]  # artifact classes that can appear as world pickups
+_ARTIFACT_POOL = [SpiralBorer, VampiricCape, Wallbreaker]  # artifact classes that can appear as world pickups
 # fmt: on
 
 
@@ -226,9 +226,10 @@ class Player:
 
 # fmt: off
 DEBUG_ITEMS = [
-    ("Spiral Borer", SpiralBorer),
-    ("Wallbreaker",  Wallbreaker),
-    ("Immortality?", None),        # None = boolean flag on Game, not an artifact
+    ("Spiral Borer",  SpiralBorer),
+    ("Wallbreaker",   Wallbreaker),
+    ("Vampiric Cape", VampiricCape),
+    ("Immortality?",  None),        # None = boolean flag on Game, not an artifact
 ]
 # fmt: on
 
@@ -987,6 +988,9 @@ class Game:
                     b.x < e.right and b.x + 2 > e.x and b.y < e.bottom and b.y + 2 > e.y
                 ):
                     e.take_damage(1)
+                    if not e.alive:
+                        for a in p.artifacts:
+                            a.on_kill(p)
                     b.alive = False
                     break
 
@@ -1121,6 +1125,12 @@ class Game:
         p = self.player
         px = int(p.x)
         py = int(p.y - cam)
+
+        # Vampiric Cape afterimage trail (drawn before player so player renders on top)
+        for a in p.artifacts:
+            if isinstance(a, VampiricCape):
+                a.draw_trail(cam)
+                break
 
         # Blink player during invincibility frames
         if p.inv_cd > 0 and (pyxel.frame_count // 4) % 2:

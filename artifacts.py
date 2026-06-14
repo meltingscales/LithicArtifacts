@@ -6,8 +6,14 @@ Each frame, Game calls artifact.on_frame(player, world, inputs) for every
 equipped artifact. Other hooks fire on specific events.
 """
 
+import random
+from collections import deque
+
+import pyxel
+
 # fmt: off
-_TILE = 8   # mirror of TILE in main.py
+_TILE      = 8     # mirror of TILE in main.py
+_SCREEN_H  = 160   # mirror of SCREEN_H
 # fmt: on
 
 
@@ -25,6 +31,10 @@ class Artifact:
 
     def on_shoot(self, player, bullet):
         """Called when the player fires; may modify bullet in place."""
+        pass
+
+    def on_kill(self, player):
+        """Called when one of the player's bullets kills an enemy."""
         pass
 
     def on_land(self, player):
@@ -72,3 +82,45 @@ class SpiralBorer(Artifact):
         lc = int(player.x // _TILE)
         rc = int((player.right - 1) // _TILE)
         return not world.solid(lc, br) and not world.solid(rc, br)
+
+
+class VampiricCape(Artifact):
+    """Leave a ghostly afterimage trail while moving; kills have a 1-in-3
+    chance to restore 1 HP."""
+
+    # fmt: off
+    name        = "Vampiric Cape"
+    glyph       = "V"
+    description = ("A cape that drinks the life from fallen foes (1-in-3 chance "
+                   "to heal 1 HP on kill) and leaves a spectral trail as you move.")
+    # fmt: on
+
+    # Pyxel color indices, oldest ghost → newest ghost (8 steps)
+    # fmt: off
+    _TRAIL_COLORS = (1, 1, 2, 2, 13, 13, 5, 6)
+    # fmt: on
+
+    def __init__(self):
+        # Circular buffer of (x, y) positions; oldest at index 0
+        self._trail: deque = deque(maxlen=8)
+        self._tick = 0  # frame counter for trail sample rate
+
+    def on_frame(self, player, world, inputs):
+        self._tick += 1
+        moving = abs(player.vx) > 0.1 or abs(player.vy) > 0.5
+        if moving and self._tick % 3 == 0:
+            self._trail.append((player.x, player.y))
+
+    def on_kill(self, player):
+        if random.random() < 1 / 3:
+            player.hp = min(player.hp + 1, player.max_hp)
+
+    def draw_trail(self, cam):
+        """Draw ghostly afterimages behind the player. Call before player draw."""
+        positions = list(self._trail)  # index 0 = oldest
+        for i, (tx, ty) in enumerate(positions):
+            sy = int(ty - cam)
+            if -_TILE <= sy < _SCREEN_H:
+                col = self._TRAIL_COLORS[min(i, len(self._TRAIL_COLORS) - 1)]
+                pyxel.text(int(tx) + 2, sy + 1, "@", col)
+                pyxel.text(int(tx) + 2, sy + _TILE + 1, "W", col)

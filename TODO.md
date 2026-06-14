@@ -20,7 +20,7 @@ None yet.
 
 ## Visuals/Aesthetic
 
-- New Artifact: Vampiric Cape (gives change for heal on kills), also does this: Moving should leave an afterimage/trail behind you, Castlevania: Symphony of the Night - similar to the trail effect seen in Castlevania: Symphony of the Night.  <https://www.youtube.com/watch?v=qmDrNeoD2X0> - see LithicArtifacts/art-direction/sotn-trail.png
+None yet.
 
 ## Other
 - Make sure assets/ is included in .spec file

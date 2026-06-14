@@ -42,3 +42,6 @@ Phase through solid floors while crouching. Burrowing is a commitment — ends o
 
 ### Wallbreaker
 Passive. Your shots destroy solid tiles on impact. Without this artifact, bullets stop at walls but don't break them.
+
+### Vampiric Cape
+Passive. Leaves a spectral afterimage trail while moving. Each kill has a 1-in-3 chance to restore 1 HP.

@@ -1,5 +1,6 @@
 # Done
 
+- Vampiric Cape artifact: SotN-style 8-ghost afterimage trail (dark navy→light gray, sampled every 3 frames); 1-in-3 heal on kill; `on_kill` hook added to Artifact base
 - Player HP / death / respawn: die at 0 hp → 1.5s death screen → Z-to-respawn (resets pos/hp/enemies); immortality debug toggle in F1 menu
 - Bug: 1-block ledge grab suppressed — check for solid ground under player at `blocking_row+1` prevents grabbing single-tile obstacles on jump frame
 - Bug: pressing up while standing now shoots straight up (aim_dx=0, aim_dy=-1); running+up still shoots diagonally
