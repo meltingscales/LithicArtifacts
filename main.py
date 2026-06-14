@@ -130,15 +130,61 @@ class Player:
     def gun_y(self):  return self.y + P_H / 4
 
 
+DEBUG_ITEMS = [
+    ("Spiral Borer", SpiralBorer),
+]
+
+
 class Game:
     def __init__(self):
         pyxel.init(SCREEN_W, SCREEN_H, title="Lithic Artifacts", fps=60)
-        self.world   = World(seed=42)
-        self.player  = Player()
+        self.world        = World(seed=42)
+        self.player       = Player()
         self.player.artifacts.append(SpiralBorer())
-        self.bullets = []
-        self.cam_y   = 0.0
+        self.bullets      = []
+        self.cam_y        = 0.0
+        self.debug_open   = False
+        self.debug_cursor = 0
         pyxel.run(self.update, self.draw)
+
+    # ---- debug menu ----
+
+    def _update_debug(self):
+        n = len(DEBUG_ITEMS)
+        if pyxel.btnp(pyxel.KEY_UP)   or pyxel.btnp(pyxel.KEY_K):
+            self.debug_cursor = (self.debug_cursor - 1) % n
+        if pyxel.btnp(pyxel.KEY_DOWN) or pyxel.btnp(pyxel.KEY_J):
+            self.debug_cursor = (self.debug_cursor + 1) % n
+        if pyxel.btnp(pyxel.KEY_Z) or pyxel.btnp(pyxel.KEY_RETURN):
+            _, cls = DEBUG_ITEMS[self.debug_cursor]
+            existing = next((a for a in self.player.artifacts if isinstance(a, cls)), None)
+            if existing:
+                self.player.artifacts.remove(existing)
+                if cls == SpiralBorer:
+                    self.player.burrowing = False
+            else:
+                self.player.artifacts.append(cls())
+        if pyxel.btnp(pyxel.KEY_ESCAPE):
+            self.debug_open = False
+
+    def _draw_debug(self):
+        p      = self.player
+        lines  = len(DEBUG_ITEMS)
+        pw     = 150
+        ph     = 24 + lines * 10
+        px0    = 4
+        py0    = 4
+        pyxel.rect(px0, py0, pw, ph, BLACK)
+        pyxel.rectb(px0, py0, pw, ph, LIGHT_GRAY)
+        pyxel.text(px0 + 4, py0 + 4,  "-- DEBUG --", YELLOW)
+        pyxel.text(px0 + 60, py0 + 4, "Z:toggle  Esc/F1:close", DARK_GRAY)
+        for i, (label, cls) in enumerate(DEBUG_ITEMS):
+            has    = any(isinstance(a, cls) for a in p.artifacts)
+            marker = "[x]" if has else "[ ]"
+            cursor = ">" if i == self.debug_cursor else " "
+            color  = YELLOW if i == self.debug_cursor else LIGHT_GRAY
+            pyxel.text(px0 + 4, py0 + 14 + i * 10,
+                       f"{cursor} {marker} {label}", color)
 
     # ---- input ----
 
@@ -263,6 +309,12 @@ class Game:
     def update(self):
         if pyxel.btnp(pyxel.KEY_Q):
             pyxel.quit()
+        if pyxel.btnp(pyxel.KEY_F1):
+            self.debug_open   = not self.debug_open
+            self.debug_cursor = 0
+        if self.debug_open:
+            self._update_debug()
+            return
 
         p    = self.player
         adx  = (-1 if self._left() else 0) + (1 if self._right() else 0)
@@ -415,6 +467,9 @@ class Game:
             cx = int(p.gun_x)
             cy = int(p.gun_y - cam)
             pyxel.rectb(cx + p.aim_dx * 12 - 2, cy + p.aim_dy * 12 - 2, 5, 5, ORANGE)
+
+        if self.debug_open:
+            self._draw_debug()
 
 
 Game()
