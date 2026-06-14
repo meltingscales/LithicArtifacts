@@ -338,6 +338,8 @@ class Game:
             or pyxel.btnp(pyxel.KEY_RETURN)
         ):
             self.pickup_dialogue = None
+            # Suppress the shoot that would fire next frame (btn vs btnp)
+            self.player.shoot_cd = SHOOT_COOLDOWN
 
     def _draw_pickup_dialogue(self, cls):
         pw, ph = 204, 92
