@@ -15,6 +15,16 @@ LIGHT_GRAY = 6
 YELLOW     = 10
 ORANGE     = 9
 
+# Pause / body-panel layout
+_CELL  = 13    # body-grid cell pitch (12 px visible + 1 px gap)
+_GX    = 8     # body grid left edge
+_GY    = 18    # body grid top edge
+_IX    = 82    # inventory list left edge
+_IY    = 18    # inventory list top edge
+_IRH   = 10    # inventory row height
+_TIPY  = 131   # tooltip divider y
+_HOVER = 180   # frames of hover before description appears (3 s @ 60 fps)
+
 GRAVITY       = 0.25
 MAX_FALL      = 4.0
 MOVE_SPEED    = 1.5
@@ -140,9 +150,20 @@ class Game:
         pyxel.init(SCREEN_W, SCREEN_H, title="Lithic Artifacts", fps=60)
         self.world        = World(seed=42)
         self.player       = Player()
-        self.player.artifacts.append(SpiralBorer())
         self.bullets      = []
         self.cam_y        = 0.0
+        # Pause / body-panel state
+        self.body_grid    = [[None] * 5 for _ in range(5)]
+        self.inventory    = [SpiralBorer()]   # start with one for testing
+        self.held         = None              # artifact currently being moved
+        self.held_src     = None              # ("body", r, c) | ("inv", i)
+        self.paused       = False
+        self.pause_panel  = 0                 # 0 = body, 1 = inventory
+        self.body_cursor  = [0, 0]            # [row, col]
+        self.inv_cursor   = 0
+        self.hover_timer  = 0
+        self.hover_key    = None
+        # Debug menu state
         self.debug_open   = False
         self.debug_cursor = 0
         pyxel.run(self.update, self.draw)
@@ -157,13 +178,17 @@ class Game:
             self.debug_cursor = (self.debug_cursor + 1) % n
         if pyxel.btnp(pyxel.KEY_Z) or pyxel.btnp(pyxel.KEY_RETURN):
             _, cls = DEBUG_ITEMS[self.debug_cursor]
-            existing = next((a for a in self.player.artifacts if isinstance(a, cls)), None)
-            if existing:
-                self.player.artifacts.remove(existing)
-                if cls == SpiralBorer:
-                    self.player.burrowing = False
+            inv_hit = next((a for a in self.inventory if isinstance(a, cls)), None)
+            bod_pos = next(((r, c) for r in range(5) for c in range(5)
+                            if isinstance(self.body_grid[r][c], cls)), None)
+            if inv_hit:
+                self.inventory.remove(inv_hit)
+            elif bod_pos:
+                r, c = bod_pos
+                self.body_grid[r][c] = None
+                self._sync_artifacts()
             else:
-                self.player.artifacts.append(cls())
+                self.inventory.append(cls())
         if pyxel.btnp(pyxel.KEY_ESCAPE):
             self.debug_open = False
 
@@ -179,12 +204,225 @@ class Game:
         pyxel.text(px0 + 4, py0 + 4,  "-- DEBUG --", YELLOW)
         pyxel.text(px0 + 60, py0 + 4, "Z:toggle  Esc/F1:close", DARK_GRAY)
         for i, (label, cls) in enumerate(DEBUG_ITEMS):
-            has    = any(isinstance(a, cls) for a in p.artifacts)
+            has    = (any(isinstance(a, cls) for a in self.inventory) or
+                      any(isinstance(self.body_grid[r][c], cls)
+                          for r in range(5) for c in range(5)
+                          if self.body_grid[r][c] is not None))
             marker = "[x]" if has else "[ ]"
             cursor = ">" if i == self.debug_cursor else " "
             color  = YELLOW if i == self.debug_cursor else LIGHT_GRAY
             pyxel.text(px0 + 4, py0 + 14 + i * 10,
                        f"{cursor} {marker} {label}", color)
+
+    # ---- pause / body panel ----
+
+    def _sync_artifacts(self):
+        """Rebuild player.artifacts from body_grid; handle side-effects."""
+        self.player.artifacts = [
+            a for row in self.body_grid for a in row if a is not None
+        ]
+        if not any(isinstance(a, SpiralBorer) for a in self.player.artifacts):
+            self.player.burrowing = False
+
+    # -- pick / place helpers --
+
+    def _hovered_artifact(self):
+        if self.held:
+            return self.held
+        if self.pause_panel == 0:
+            r, c = self.body_cursor
+            return self.body_grid[r][c]
+        if self.inventory and self.inv_cursor < len(self.inventory):
+            return self.inventory[self.inv_cursor]
+        return None
+
+    def _pickup_from_body(self, r, c):
+        a = self.body_grid[r][c]
+        if a is None:
+            return
+        self.body_grid[r][c] = None
+        self.held     = a
+        self.held_src = ("body", r, c)
+        self._sync_artifacts()
+
+    def _pickup_from_inventory(self):
+        if not self.inventory or self.inv_cursor >= len(self.inventory):
+            return
+        a = self.inventory.pop(self.inv_cursor)
+        self.inv_cursor = min(self.inv_cursor, max(0, len(self.inventory) - 1))
+        self.held     = a
+        self.held_src = ("inv", self.inv_cursor)
+
+    def _place_on_body(self, r, c):
+        other = self.body_grid[r][c]
+        self.body_grid[r][c] = self.held
+        if other is not None:
+            self._return_to_src(other)
+        self.held     = None
+        self.held_src = None
+        self._sync_artifacts()
+
+    def _place_in_inventory(self):
+        idx = min(self.inv_cursor, len(self.inventory))
+        self.inventory.insert(idx, self.held)
+        self.held     = None
+        self.held_src = None
+
+    def _cancel_hold(self):
+        src, *pos = self.held_src
+        if src == "body":
+            r, c = pos
+            self.body_grid[r][c] = self.held
+            self._sync_artifacts()
+        else:
+            i = pos[0]
+            self.inventory.insert(min(i, len(self.inventory)), self.held)
+        self.held     = None
+        self.held_src = None
+
+    def _return_to_src(self, artifact):
+        """Send a displaced artifact back to where the held item came from."""
+        src, *pos = self.held_src
+        if src == "body":
+            r, c = pos
+            self.body_grid[r][c] = artifact
+        else:
+            i = pos[0]
+            self.inventory.insert(min(i, len(self.inventory)), artifact)
+
+    # -- update / draw --
+
+    def _update_pause(self):
+        # Tab / LB / RB: switch panels
+        if (pyxel.btnp(pyxel.KEY_TAB) or
+                pyxel.btnp(pyxel.GAMEPAD1_BUTTON_LEFTSHOULDER) or
+                pyxel.btnp(pyxel.GAMEPAD1_BUTTON_RIGHTSHOULDER)):
+            self.pause_panel = 1 - self.pause_panel
+            return
+
+        # Escape / Start / B: cancel hold or close menu
+        if (pyxel.btnp(pyxel.KEY_ESCAPE) or
+                pyxel.btnp(pyxel.GAMEPAD1_BUTTON_START) or
+                pyxel.btnp(pyxel.GAMEPAD1_BUTTON_B)):
+            if self.held:
+                self._cancel_hold()
+            else:
+                self.paused = False
+            return
+
+        up   = (pyxel.btnp(pyxel.KEY_UP)    or pyxel.btnp(pyxel.KEY_K) or
+                pyxel.btnp(pyxel.GAMEPAD1_BUTTON_DPAD_UP))
+        down = (pyxel.btnp(pyxel.KEY_DOWN)  or pyxel.btnp(pyxel.KEY_J) or
+                pyxel.btnp(pyxel.GAMEPAD1_BUTTON_DPAD_DOWN))
+        left = (pyxel.btnp(pyxel.KEY_LEFT)  or pyxel.btnp(pyxel.KEY_H) or
+                pyxel.btnp(pyxel.GAMEPAD1_BUTTON_DPAD_LEFT))
+        rght = (pyxel.btnp(pyxel.KEY_RIGHT) or pyxel.btnp(pyxel.KEY_L) or
+                pyxel.btnp(pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT))
+        act  = (pyxel.btnp(pyxel.KEY_Z)     or pyxel.btnp(pyxel.KEY_RETURN) or
+                pyxel.btnp(pyxel.GAMEPAD1_BUTTON_A))
+
+        if self.pause_panel == 0:   # body grid
+            r, c = self.body_cursor
+            if up:    r = max(0, r - 1)
+            if down:  r = min(4, r + 1)
+            if left:  c = max(0, c - 1)
+            if rght:  c = min(4, c + 1)
+            self.body_cursor = [r, c]
+            if act:
+                if self.held:
+                    self._place_on_body(r, c)
+                else:
+                    self._pickup_from_body(r, c)
+        else:                       # inventory list
+            n = len(self.inventory)
+            if up:   self.inv_cursor = max(0, self.inv_cursor - 1)
+            if down: self.inv_cursor = min(max(0, n - 1), self.inv_cursor + 1)
+            if act:
+                if self.held:
+                    self._place_in_inventory()
+                else:
+                    self._pickup_from_inventory()
+
+        # Hover-timer: reset whenever cursor lands on a different artifact
+        hov = self._hovered_artifact()
+        if hov is not self.hover_key:
+            self.hover_key   = hov
+            self.hover_timer = 0
+        else:
+            self.hover_timer += 1
+
+    def _draw_pause(self):
+        pyxel.cls(BLACK)
+
+        # Panel headers
+        bc = YELLOW if self.pause_panel == 0 else LIGHT_GRAY
+        ic = YELLOW if self.pause_panel == 1 else LIGHT_GRAY
+        pyxel.text(_GX, 4, "BODY",              bc)
+        pyxel.text(_IX, 4, "INVENTORY",          ic)
+        pyxel.text(170, 4, "TAB:switch Esc:close", DARK_GRAY)
+
+        # Body grid
+        for r in range(5):
+            for c in range(5):
+                x0     = _GX + c * _CELL
+                y0     = _GY + r * _CELL
+                is_cur = (self.pause_panel == 0 and self.body_cursor == [r, c])
+                a      = self.body_grid[r][c]
+                pyxel.rectb(x0, y0, _CELL - 1, _CELL - 1,
+                            YELLOW if is_cur else DARK_GRAY)
+                if is_cur and self.held:
+                    pyxel.text(x0 + 3, y0 + 3, self.held.glyph, ORANGE)
+                elif a:
+                    pyxel.text(x0 + 3, y0 + 3, a.glyph, LIGHT_GRAY)
+
+        # "HOLDING" indicator below the grid
+        if self.held:
+            hy = _GY + 5 * _CELL + 3
+            pyxel.text(_GX, hy,     f"HOLD:{self.held.glyph} {self.held.name}", ORANGE)
+            pyxel.text(_GX, hy + 9, "Z:place  Esc:cancel", DARK_GRAY)
+
+        # Inventory list (scrolling)
+        max_vis = (_TIPY - _IY - 2) // _IRH
+        scroll  = max(0, self.inv_cursor - max_vis + 1)
+        if not self.inventory:
+            pyxel.text(_IX, _IY, "(empty)", DARK_GRAY)
+        for i, a in enumerate(self.inventory):
+            vi = i - scroll
+            if vi < 0 or vi >= max_vis:
+                continue
+            is_cur = (self.pause_panel == 1 and self.inv_cursor == i)
+            col    = YELLOW if is_cur else LIGHT_GRAY
+            pre    = ">" if is_cur else " "
+            pyxel.text(_IX, _IY + vi * _IRH, f"{pre}{a.glyph} {a.name}", col)
+
+        # Tooltip
+        pyxel.line(0, _TIPY - 1, SCREEN_W - 1, _TIPY - 1, DARK_GRAY)
+        hov = self._hovered_artifact()
+        if hov:
+            if self.held:
+                pyxel.text(4, _TIPY + 2, f"HOLDING: {hov.name}", ORANGE)
+            else:
+                pyxel.text(4, _TIPY + 2, hov.name, YELLOW)
+                if self.hover_timer >= _HOVER:
+                    for i, ln in enumerate(self._wrap(hov.description, 55)[:2]):
+                        pyxel.text(4, _TIPY + 12 + i * 10, ln, LIGHT_GRAY)
+                else:
+                    pyxel.text(4, _TIPY + 12, "...", DARK_GRAY)
+
+    @staticmethod
+    def _wrap(text, width):
+        words, lines, line = text.split(), [], ""
+        for w in words:
+            candidate = (line + " " + w) if line else w
+            if len(candidate) <= width:
+                line = candidate
+            else:
+                if line:
+                    lines.append(line)
+                line = w
+        if line:
+            lines.append(line)
+        return lines
 
     # ---- input ----
 
@@ -309,11 +547,24 @@ class Game:
     def update(self):
         if pyxel.btnp(pyxel.KEY_Q):
             pyxel.quit()
+
+        # Pause takes input priority; Tab/Start opens it from gameplay
+        if self.paused:
+            self._update_pause()
+            return
+
+        # F1 debug menu (only when not paused)
         if pyxel.btnp(pyxel.KEY_F1):
             self.debug_open   = not self.debug_open
             self.debug_cursor = 0
         if self.debug_open:
             self._update_debug()
+            return
+
+        # Tab / Start opens pause menu from gameplay
+        if (pyxel.btnp(pyxel.KEY_TAB) or
+                pyxel.btnp(pyxel.GAMEPAD1_BUTTON_START)):
+            self.paused = True
             return
 
         p    = self.player
@@ -425,6 +676,10 @@ class Game:
         self.cam_y  = max(0.0, self.cam_y)
 
     def draw(self):
+        if self.paused:
+            self._draw_pause()
+            return
+
         pyxel.cls(BLACK)
         cam   = self.cam_y
         first = max(0, int(cam // TILE) - 1)

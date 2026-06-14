@@ -10,8 +10,9 @@ _TILE = 8   # mirror of TILE in main.py
 
 
 class Artifact:
-    name  = ""
-    glyph = "?"
+    name        = ""
+    glyph       = "?"
+    description = ""
 
     def on_frame(self, player, world, inputs):
         """Called once per frame.
@@ -30,8 +31,10 @@ class Artifact:
 class SpiralBorer(Artifact):
     """Phase downward through solid floors without destroying them.
     Entering is a commitment — burrowing ends only when you emerge below."""
-    name  = "Spiral Borer"
-    glyph = "B"
+    name        = "Spiral Borer"
+    glyph       = "B"
+    description = ("Phase through solid floors without destroying them. "
+                   "Commitment — burrowing ends only when you emerge below.")
 
     def on_frame(self, player, world, inputs):
         if player.burrowing:
