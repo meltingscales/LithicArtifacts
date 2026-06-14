@@ -17,7 +17,13 @@ the same treatment.
 
 ## Reusable prompts (for user)
 
+### Questions
+
 - Do we need to split up any large modules?
+
+### Caveman mode
+
 - /caveman (can be run to save tokens)
-  - `curl -fsSL https://raw.githubusercontent.com/JuliusBrussee/caveman/main/install.sh | bash`
-  - <https://github.com/JuliusBrussee/caveman-code>
+- "caveman mode"
+- `curl -fsSL https://raw.githubusercontent.com/JuliusBrussee/caveman/main/install.sh | bash`
+- <https://github.com/JuliusBrussee/caveman-code>
