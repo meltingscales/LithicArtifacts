@@ -2,11 +2,13 @@
 
 A tiny roguelike about finding cursed body modifications and breaking yourself in interesting ways.
 
-Inspired by **Caves of Qud**, **Metroid Fusion**, **the original Rogue**, and **LithicRivers**.
+Inspired by **Caves of Qud**, **Metroid Fusion**, **Downwell**, **the original Rogue**, and **LithicRivers**.
 
 See [DESIGN-DECISIONS.md](DESIGN-DECISIONS.md) for locked design decisions and rationale.
 
 See [KEYBINDS.md](KEYBINDS.md) for all keyboard and gamepad bindings.
+
+See [ART-DIRECTION.md](ART-DIRECTION.md) for the art direction and style guide, and `./art-direction` for inspiration in the form of images.
 
 ---
 
@@ -39,6 +41,9 @@ main.py: Main game logic
 artifacts.py: Rare artifacts declared here
 enemies.py: Enemies declared here
 worldgen.py: Worldgen, perlin noise etc, and dungeon/structures declared here
+assets/: Directory containing asset generation scripts and audio/image assets for game
+assets/generate-8x8-datamosh.py: Script to generate 8x8 datamoshed sprites
+assets/generate-audio-datamosh.py: Script to generate audio datamoshed samples
 ```
 
 ## Scope
