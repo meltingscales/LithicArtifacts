@@ -14,3 +14,8 @@ See .claude/current-context.md
 `__init__` attribute groups, palette data, etc.) are wrapped in `# fmt: off` /
 `# fmt: on` so the formatter leaves them alone. New aligned blocks should get
 the same treatment.
+
+## Reusable prompts (for user)
+
+- Do we need to split up any large modules?
+- /caveman (can be run to save tokens)
