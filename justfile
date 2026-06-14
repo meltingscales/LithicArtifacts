@@ -16,6 +16,25 @@ fmt:
 lint:
     uv run ruff check .
 
+# Extended help for `audio`:
+#   MODE (positional): wavetable | noise | both  (default: both)
+#     wavetable  — 8×8 image patches → cubic-interpolated wavetables, morphed per clip
+#     noise      — FM synthesis with Perlin-noise-driven carrier, ratio, index, amp
+#   Flags: --count N (per mode, default 32)  --seed N (default 42)
+#          --duration F (seconds, default 1.0)
+#   Wavetable-only:  --pitch F (Hz, default 220)
+#   Noise-only:      --base-freq F (carrier Hz, default 110)
+#                    --fm-ratio F (mod/carrier ratio, default 2.0)
+#                    --fm-index F (modulation depth, default 3.0)
+#   Examples:
+#     just audio
+#     just audio wavetable --pitch 440 --duration 0.5
+#     just audio noise --base-freq 55 --fm-ratio 3.5 --fm-index 6.0 --count 64
+
+# Generate audio candidates (32768 Hz mono WAV) → assets/candidates/audio/
+audio MODE="both" *ARGS="":
+    uv run python assets/generate-audio-datamosh.py --mode {{MODE}} {{ARGS}}
+
 # Extended help for `sprites`:
 #   MODE (positional): sample | noise | both  (default: both)
 #     sample  — crop 8×8 patches from art-direction/ refs, snap to Pyxel palette
