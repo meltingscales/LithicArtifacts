@@ -162,14 +162,35 @@ class Flyer(Enemy):
         self.t      = 0
         self.phase  = random.uniform(0.0, math.pi * 2)
 
+    def _move_x(self, world):
+        self.x += self.vx
+        lc   = int(self.x // _TILE)
+        rc   = int((self.right - 1) // _TILE)
+        rows = range(int(self.y // _TILE), int((self.bottom - 1) // _TILE) + 1)
+        if self.vx > 0:
+            if any(world.solid(rc, r) for r in rows):
+                self.x  = float(rc * _TILE - _TILE)
+                self.vx = -self.vx
+        elif self.vx < 0:
+            if any(world.solid(lc, r) for r in rows):
+                self.x  = float((lc + 1) * _TILE)
+                self.vx = -self.vx
+
     def update(self, world, player, enemy_bullets):
         self.t += 1
         # Drift toward player
         dx      = (player.x + _TILE / 2) - (self.x + _TILE / 2)
         self.vx = max(-_FLYER_SPEED, min(_FLYER_SPEED, dx * 0.04))
-        self.x += self.vx
-        # Sinusoidal bob around spawn height
-        self.y = self.base_y + math.sin(self.t * _FLYER_FREQ + self.phase) * _FLYER_AMP
+        self._move_x(world)
+        # Sinusoidal bob — only apply if the destination is clear
+        desired_y = self.base_y + math.sin(self.t * _FLYER_FREQ + self.phase) * _FLYER_AMP
+        lc = int(self.x // _TILE)
+        rc = int((self.right - 1) // _TILE)
+        tr = int(desired_y // _TILE)
+        br = int((desired_y + _TILE - 1) // _TILE)
+        if not (world.solid(lc, tr) or world.solid(rc, tr) or
+                world.solid(lc, br) or world.solid(rc, br)):
+            self.y = desired_y
 
 
 # ---------------------------------------------------------------------------
