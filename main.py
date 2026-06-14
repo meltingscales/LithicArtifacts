@@ -3,6 +3,7 @@ import pyxel
 import random
 
 from artifacts import SpiralBorer
+from enemies   import Crawler, Flyer, ShootyFlier, EnemyBullet
 
 SCREEN_W = 240
 SCREEN_H = 160
@@ -43,9 +44,10 @@ P_HIT_INS = 1       # horizontal inset for floor/ceiling checks; lets player sli
 
 class World:
     def __init__(self, seed=0):
-        self.tiles   = {}
-        self.rng     = random.Random(seed)
-        self._gen_to = -1
+        self.tiles          = {}
+        self.rng            = random.Random(seed)
+        self._gen_to        = -1
+        self.pending_spawns = []   # list of (px_x, px_y, type_str) drained by Game
         self._gen(80)
 
     def _gen(self, up_to):
@@ -66,6 +68,22 @@ class World:
                 for x in range(1, COLS - 1):
                     if not (gap <= x < gap + gap_w):
                         self.tiles[(x, y)] = 1
+                # Maybe spawn an enemy on the new platform (skip very top)
+                if y > 22 and self.rng.random() < 0.45:
+                    solid = [x for x in range(1, COLS - 1)
+                             if not (gap <= x < gap + gap_w)]
+                    if len(solid) >= 2:
+                        sc = self.rng.choice(solid)
+                        r  = self.rng.random()
+                        if r < 0.5:
+                            self.pending_spawns.append(
+                                (sc * TILE, (y - 1) * TILE, "crawler"))
+                        elif r < 0.8:
+                            self.pending_spawns.append(
+                                (sc * TILE, (y - 4) * TILE, "flyer"))
+                        else:
+                            self.pending_spawns.append(
+                                (sc * TILE, (y - 4) * TILE, "shooty_flier"))
         self._gen_to = up_to
 
     def ensure_gen(self, row):
@@ -129,6 +147,9 @@ class Player:
         self.ledge_cd     = 0
         self.burrowing    = False
         self.artifacts    = []
+        self.hp           = 10
+        self.max_hp       = 10
+        self.inv_cd       = 0    # invincibility frames after taking damage
 
     @property
     def right(self):  return self.x + P_W
@@ -153,8 +174,10 @@ class Game:
         self.bullets      = []
         self.cam_y        = 0.0
         # Pause / body-panel state
-        self.body_grid    = [[None] * 5 for _ in range(5)]
-        self.inventory    = [SpiralBorer()]   # start with one for testing
+        self.body_grid     = [[None] * 5 for _ in range(5)]
+        self.inventory     = [SpiralBorer()]   # start with one for testing
+        self.enemies       = []
+        self.enemy_bullets = []
         self.held         = None              # artifact currently being moved
         self.held_src     = None              # ("body", r, c) | ("inv", i)
         self.paused       = False
@@ -575,6 +598,7 @@ class Game:
         if p.wj_cd_l  > 0: p.wj_cd_l  -= 1
         if p.wj_cd_r  > 0: p.wj_cd_r  -= 1
         if p.ledge_cd > 0: p.ledge_cd -= 1
+        if p.inv_cd   > 0: p.inv_cd   -= 1
 
         inputs = {
             "left":  self._left(),  "right": self._right(),
@@ -667,7 +691,57 @@ class Game:
 
         for b in self.bullets:
             b.update(self.world)
+
+        # Player bullets vs enemies
+        for b in self.bullets:
+            if not b.alive:
+                continue
+            for e in self.enemies:
+                if e.alive and (b.x < e.right and b.x + 2 > e.x and
+                                b.y < e.bottom and b.y + 2 > e.y):
+                    e.take_damage(1)
+                    b.alive = False
+                    break
+
         self.bullets = [b for b in self.bullets if b.alive]
+
+        # Drain world spawn queue
+        for sx, sy, etype in self.world.pending_spawns:
+            if   etype == "crawler":      self.enemies.append(Crawler(sx, sy))
+            elif etype == "flyer":        self.enemies.append(Flyer(sx, sy))
+            elif etype == "shooty_flier": self.enemies.append(ShootyFlier(sx, sy))
+        self.world.pending_spawns.clear()
+
+        # Update enemies
+        for e in self.enemies:
+            if e.alive:
+                e.update(self.world, p, self.enemy_bullets)
+
+        # Update enemy bullets
+        for eb in self.enemy_bullets:
+            eb.update()
+
+        # Damage player (enemy contact, then enemy bullets; one source per inv window)
+        if p.inv_cd == 0:
+            for e in self.enemies:
+                if e.alive and (p.x < e.right and p.right > e.x and
+                                p.y < e.bottom and p.bottom > e.y):
+                    p.hp    = max(0, p.hp - e.damage)
+                    p.inv_cd = 60
+                    break
+            else:
+                for eb in self.enemy_bullets:
+                    if eb.alive and (p.x < eb.x + 2 and p.right > eb.x and
+                                     p.y < eb.y + 2 and p.bottom > eb.y):
+                        p.hp     = max(0, p.hp - 1)
+                        p.inv_cd = 60
+                        eb.alive = False
+                        break
+
+        # Cull dead / off-screen-above objects
+        cull_y = self.cam_y - SCREEN_H * 3
+        self.enemies       = [e  for e  in self.enemies       if e.alive  and e.y  > cull_y]
+        self.enemy_bullets = [eb for eb in self.enemy_bullets if eb.alive and eb.y > cull_y]
 
         self.world.ensure_gen(int(p.bottom // TILE) + 40)
 
@@ -696,11 +770,20 @@ class Game:
         for b in self.bullets:
             b.draw(cam)
 
+        for eb in self.enemy_bullets:
+            eb.draw(cam)
+
+        for e in self.enemies:
+            e.draw(cam)
+
         p  = self.player
         px = int(p.x)
         py = int(p.y - cam)
 
-        if p.state == "hanging":
+        # Blink player during invincibility frames
+        if p.inv_cd > 0 and (pyxel.frame_count // 4) % 2:
+            pass  # skip draw this frame
+        elif p.state == "hanging":
             pyxel.text(px + 2, py + 1,        "@", YELLOW)
             pyxel.text(px + 2, py + TILE + 1, "n", YELLOW)
         elif p.burrowing:
@@ -722,6 +805,11 @@ class Game:
             cx = int(p.gun_x)
             cy = int(p.gun_y - cam)
             pyxel.rectb(cx + p.aim_dx * 12 - 2, cy + p.aim_dy * 12 - 2, 5, 5, ORANGE)
+
+        # HP HUD — row of 4×4 blocks at bottom-left
+        for i in range(p.max_hp):
+            col = YELLOW if i < p.hp else DARK_GRAY
+            pyxel.rect(4 + i * 5, SCREEN_H - 8, 4, 4, col)
 
         if self.debug_open:
             self._draw_debug()
