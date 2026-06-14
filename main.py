@@ -41,6 +41,7 @@ WALL_JUMP_CD  = 24    # frames before same-side wall jump allowed again
 
 BULLET_SPEED   = 5.0
 SHOOT_COOLDOWN = 12
+DEATH_HOLD     = 90   # frames of death screen before respawn prompt appears
 
 P_W       = TILE
 P_H       = TILE * 2
@@ -227,6 +228,7 @@ class Player:
 DEBUG_ITEMS = [
     ("Spiral Borer", SpiralBorer),
     ("Wallbreaker",  Wallbreaker),
+    ("Immortality?", None),        # None = boolean flag on Game, not an artifact
 ]
 # fmt: on
 
@@ -262,6 +264,10 @@ class Game:
         # Debug menu state
         self.debug_open   = False
         self.debug_cursor = 0
+        # Death / respawn state
+        self.dead         = False
+        self.death_timer  = 0        # counts down from DEATH_HOLD; respawn when 0
+        self.immortal     = False    # debug toggle
         # fmt: on
         pyxel.run(self.update, self.draw)
 
@@ -285,7 +291,9 @@ class Game:
                 ),
                 None,
             )
-            if inv_hit:
+            if cls is None:
+                self.immortal = not self.immortal
+            elif inv_hit:
                 self.inventory.remove(inv_hit)
             elif bod_pos:
                 r, c = bod_pos
@@ -308,12 +316,15 @@ class Game:
         pyxel.text(px0 + 4, py0 + 4, "-- DEBUG --", YELLOW)
         pyxel.text(px0 + 60, py0 + 4, "Z:toggle  Esc/F1:close", DARK_GRAY)
         for i, (label, cls) in enumerate(DEBUG_ITEMS):
-            has = any(isinstance(a, cls) for a in self.inventory) or any(
-                isinstance(self.body_grid[r][c], cls)
-                for r in range(5)
-                for c in range(5)
-                if self.body_grid[r][c] is not None
-            )
+            if cls is None:
+                has = self.immortal
+            else:
+                has = any(isinstance(a, cls) for a in self.inventory) or any(
+                    isinstance(self.body_grid[r][c], cls)
+                    for r in range(5)
+                    for c in range(5)
+                    if self.body_grid[r][c] is not None
+                )
             marker = "[x]" if has else "[ ]"
             cursor = ">" if i == self.debug_cursor else " "
             color = YELLOW if i == self.debug_cursor else LIGHT_GRAY
@@ -730,11 +741,46 @@ class Game:
                 return
         p.wall_contact = 0
 
+    # ---- death / respawn ----
+
+    def _respawn(self):
+        p = self.player
+        # fmt: off
+        p.x          = float(SCREEN_W // 2 - P_W // 2)
+        p.y          = float(TILE * 2)
+        p.vx         = 0.0
+        p.vy         = 0.0
+        p.hp         = p.max_hp
+        p.inv_cd     = 0
+        p.state      = "normal"
+        p.crouching  = False
+        p.burrowing  = False
+        p.on_ground  = False
+        # fmt: on
+        # fmt: off
+        self.enemies       = []
+        self.enemy_bullets = []
+        self.bullets       = []
+        self.cam_y         = 0.0
+        self.dead          = False
+        self.death_timer   = 0
+        # fmt: on
+
     # ---- update / draw ----
 
     def update(self):
         if pyxel.btnp(pyxel.KEY_Q):
             pyxel.quit()
+
+        # Death screen
+        if self.dead:
+            if self.death_timer > 0:
+                self.death_timer -= 1
+            if self.death_timer == 0 and (
+                pyxel.btnp(pyxel.KEY_Z) or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_X)
+            ):
+                self._respawn()
+            return
 
         # Pickup dialogue takes highest priority (freezes all gameplay)
         if self.pickup_dialogue is not None:
@@ -970,7 +1016,7 @@ class Game:
             eb.update()
 
         # Damage player (enemy contact, then enemy bullets; one source per inv window)
-        if p.inv_cd == 0:
+        if p.inv_cd == 0 and not self.immortal:
             for e in self.enemies:
                 if e.alive and (
                     p.x < e.right
@@ -993,6 +1039,9 @@ class Game:
                         p.inv_cd = 60
                         eb.alive = False
                         break
+            if p.hp == 0:
+                self.dead = True
+                self.death_timer = DEATH_HOLD
 
         # Pickup collection
         for pu in self.world.pickups:
@@ -1023,7 +1072,18 @@ class Game:
         self.cam_y += (target - self.cam_y) * 0.12
         self.cam_y = max(0.0, self.cam_y)
 
+    def _draw_death(self):
+        pyxel.cls(BLACK)
+        cx = SCREEN_W // 2
+        cy = SCREEN_H // 2
+        pyxel.text(cx - 21, cy - 8, "YOU DIED", ORANGE)
+        if self.death_timer == 0:
+            pyxel.text(cx - 30, cy + 4, "Z to continue", LIGHT_GRAY)
+
     def draw(self):
+        if self.dead:
+            self._draw_death()
+            return
         if self.paused:
             self._draw_pause()
             return

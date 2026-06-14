@@ -9,7 +9,6 @@ None yet.
 - Ice Missiles: [TBD]
 
 ## Gameplay
-- Player HP / death / respawn
 - Floors / progression (floor counter, difficulty scaling)
 
 ## Worldgen
