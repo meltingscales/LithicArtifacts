@@ -6,6 +6,8 @@ Inspired by **Caves of Qud**, **Metroid Fusion**, **the original Rogue**, and **
 
 See [DESIGN-DECISIONS.md](DESIGN-DECISIONS.md) for locked design decisions and rationale.
 
+See [KEYBINDS.md](KEYBINDS.md) for all keyboard and gamepad bindings.
+
 ---
 
 ## Concept
