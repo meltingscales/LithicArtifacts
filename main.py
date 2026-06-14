@@ -644,21 +644,12 @@ class Game:
             p.aim_locked = self._aim_lock()
 
             if p.crouching:
-                # Crouching: stationary; left/right only updates facing
-                p.vx = 0.0
-                if self._left():  p.facing = -1
-                if self._right(): p.facing = 1
-                if p.aim_locked:
-                    ady = (-1 if self._up() else 0) + (1 if self._down() else 0)
-                    if adx != 0 or ady != 0:
-                        p.aim_dx = adx
-                        p.aim_dy = ady
-                else:
-                    # No lock: shoot straight forward from the crouched position
-                    p.aim_dx = p.facing
-                    p.aim_dy = 0
-                # Toggle off: Down press → stand up if headroom allows
-                if down_p:
+                # Any of these uncrouches (if headroom allows): move, up, jump, Down-toggle
+                want_uncrouch = (
+                    (adx != 0 and not p.aim_locked) or
+                    self._up() or jump or down_p
+                )
+                if want_uncrouch:
                     tr = int(p.y // TILE) - 1
                     lc = int((p.x + P_HIT_INS) // TILE)
                     rc = int((p.right - 1 - P_HIT_INS) // TILE)
@@ -666,6 +657,26 @@ class Game:
                                       self.world.solid(rc, tr)):
                         p.y        -= TILE
                         p.crouching = False
+                        # Apply normal movement for this frame immediately
+                        p.vx = adx * MOVE_SPEED
+                        if adx != 0: p.facing = adx
+                        p.aim_dx = p.facing
+                        p.aim_dy = -1 if (self._up() and adx != 0) else 0
+
+                if p.crouching:
+                    # Still crouching (ceiling blocked stand-up, or no trigger)
+                    p.vx = 0.0
+                    if self._left():  p.facing = -1
+                    if self._right(): p.facing = 1
+                    if p.aim_locked:
+                        ady = (-1 if self._up() else 0) + (1 if self._down() else 0)
+                        if adx != 0 or ady != 0:
+                            p.aim_dx = adx
+                            p.aim_dy = ady
+                    else:
+                        # No lock: shoot straight forward from the crouched position
+                        p.aim_dx = p.facing
+                        p.aim_dy = 0
             elif p.aim_locked:
                 # Freeze horizontal movement; direction keys control aim
                 p.vx = 0.0
@@ -690,7 +701,7 @@ class Game:
                     p.crouching = True
                     p.vx        = 0.0
 
-            if jump and not p.burrowing and not p.crouching:
+            if jump and not p.burrowing and not p.crouching:  # crouching uncrouches above
                 if p.on_ground:
                     p.vy        = JUMP_VEL
                     p.on_ground = False
