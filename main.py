@@ -272,11 +272,8 @@ class Game:
                 # diag-up-away, diag-down-away (nothing toward/into the wall).
                 free = -p.hang_wall
                 ady  = (-1 if self._up() else 0) + (1 if self._down() else 0)
-                if adx == free:
-                    p.aim_dx = free
-                elif adx != 0:      # pressing into wall → neutral horizontal
-                    p.aim_dx = 0
                 if adx != 0 or ady != 0:
+                    p.aim_dx = free if adx == free else 0
                     p.aim_dy = ady
                 if jump:
                     p.state    = "normal"
@@ -301,9 +298,8 @@ class Game:
                 # Freeze horizontal movement; direction keys control aim
                 p.vx = 0.0
                 ady  = (-1 if self._up() else 0) + (1 if self._down() else 0)
-                if adx != 0:
-                    p.aim_dx = adx
                 if adx != 0 or ady != 0:
+                    p.aim_dx = adx
                     p.aim_dy = ady
             else:
                 # Straight jump: no air control until landing
