@@ -2,7 +2,7 @@ See README.md and DESIGN-DECISIONS.md
 
 See ART-DIRECTION.md
 
-See TODO.md
+See TODO.md. Finished items go in TODO-DONE.md
 
 See KEYBINDS.md
 

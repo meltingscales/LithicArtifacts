@@ -19,19 +19,21 @@ spawn_list:          [(px_x, px_y, type_str)]
 import random
 
 # Mirrors of main.py constants (no import to avoid circular deps)
+# fmt: off
 _COLS      = 30
 _SECTION_H = 20
 _MIN_FREE  = 4    # narrowest permitted corridor (must fit the player)
 
 SECTION_H = _SECTION_H   # exported for main.py
+# fmt: on
 
 
 # ---------------------------------------------------------------------------
 # Public entry point
 # ---------------------------------------------------------------------------
 
-def gen_section(rng, abs_start_row, entry_free_l, entry_free_r,
-                artifact_cls=None):
+
+def gen_section(rng, abs_start_row, entry_free_l, entry_free_r, artifact_cls=None):
     """
     Generate one SECTION_H-row section of the dungeon.
 
@@ -51,7 +53,7 @@ def gen_section(rng, abs_start_row, entry_free_l, entry_free_r,
     free_r       : exit corridor right
     """
     stype = rng.choices(
-        ('open', 'platforms', 'chamber'),
+        ("open", "platforms", "chamber"),
         weights=(0.30, 0.50, 0.20),
     )[0]
 
@@ -59,28 +61,32 @@ def gen_section(rng, abs_start_row, entry_free_l, entry_free_r,
     cx = (entry_free_l + entry_free_r) // 2
     cx = max(5, min(_COLS - 6, cx + rng.randint(-4, 4)))
 
+    # fmt: off
     free_w = max(_MIN_FREE, {
         'open':      rng.randint(10, 16),
         'platforms': rng.randint(5,  9),
         'chamber':   rng.randint(12, 18),
     }[stype])
+    # fmt: on
 
     free_l = max(1, cx - free_w // 2)
     free_r = min(_COLS - 2, free_l + free_w - 1)
-    free_l = max(1, free_r - free_w + 1)   # re-clamp after right side clamped
+    free_l = max(1, free_r - free_w + 1)  # re-clamp after right side clamped
 
-    tiles  = {}
+    tiles = {}
     pickup = None
 
     # Side walls for every row in the section
     for r in range(_SECTION_H):
         row = abs_start_row + r
+        # fmt: off
         tiles[(0, row)]          = 1
         tiles[(_COLS - 1, row)]  = 1
+        # fmt: on
 
-    if stype == 'platforms':
+    if stype == "platforms":
         _gen_platforms(rng, tiles, abs_start_row, free_l, free_r, density=0.22)
-    elif stype == 'open':
+    elif stype == "open":
         _gen_platforms(rng, tiles, abs_start_row, free_l, free_r, density=0.08)
     else:  # chamber
         _gen_chamber(rng, tiles, abs_start_row, free_l, free_r)
@@ -97,6 +103,7 @@ def gen_section(rng, abs_start_row, entry_free_l, entry_free_r,
 # Section sub-generators
 # ---------------------------------------------------------------------------
 
+
 def _gen_platforms(rng, tiles, abs_start, free_l, free_r, density):
     """
     Scatter wing platforms.  The free corridor [free_l..free_r] stays clear.
@@ -110,15 +117,15 @@ def _gen_platforms(rng, tiles, abs_start, free_l, free_r, density):
 
         # Left wing
         if free_l > 3 and rng.random() < 0.65:
-            pw  = rng.randint(2, max(2, free_l - 2))
-            pl  = rng.randint(1, max(1, free_l - pw - 1))
+            pw = rng.randint(2, max(2, free_l - 2))
+            pl = rng.randint(1, max(1, free_l - pw - 1))
             for c in range(pl, min(pl + pw, free_l)):
                 tiles[(c, row)] = 1
 
         # Right wing
         if free_r < _COLS - 4 and rng.random() < 0.65:
-            pw  = rng.randint(2, max(2, _COLS - 2 - free_r - 1))
-            pr  = rng.randint(free_r + 1, max(free_r + 1, _COLS - 2 - pw))
+            pw = rng.randint(2, max(2, _COLS - 2 - free_r - 1))
+            pr = rng.randint(free_r + 1, max(free_r + 1, _COLS - 2 - pw))
             for c in range(pr, min(pr + pw, _COLS - 1)):
                 tiles[(c, row)] = 1
 
@@ -137,14 +144,14 @@ def _gen_chamber(rng, tiles, abs_start, free_l, free_r):
 
     # Optional interior wing platform
     if rng.random() < 0.55:
-        mid  = abs_start + _SECTION_H // 2
-        side = rng.choice(('left', 'right'))
-        if side == 'left' and free_l > 4:
+        mid = abs_start + _SECTION_H // 2
+        side = rng.choice(("left", "right"))
+        if side == "left" and free_l > 4:
             pw = rng.randint(2, max(2, free_l - 2))
             pl = rng.randint(1, max(1, free_l - pw - 1))
             for c in range(pl, min(pl + pw, free_l)):
                 tiles[(c, mid)] = 1
-        elif side == 'right' and free_r < _COLS - 5:
+        elif side == "right" and free_r < _COLS - 5:
             pw = rng.randint(2, max(2, _COLS - 2 - free_r - 1))
             pr = rng.randint(free_r + 1, max(free_r + 1, _COLS - 2 - pw))
             for c in range(pr, min(pr + pw, _COLS - 1)):
@@ -153,28 +160,29 @@ def _gen_chamber(rng, tiles, abs_start, free_l, free_r):
 
 def _gen_spawns(rng, tiles, abs_start, stype):
     """Place enemy spawns on top of solid tiles that have open space above."""
-    spawns  = []
-    density = 0.28 if stype == 'platforms' else 0.12
+    spawns = []
+    density = 0.28 if stype == "platforms" else 0.12
     for r in range(1, _SECTION_H - 1):
         row = abs_start + r
         if rng.random() >= density:
             continue
         candidates = [
-            c for c in range(1, _COLS - 1)
+            c
+            for c in range(1, _COLS - 1)
             if (c, row) in tiles and (c, row - 1) not in tiles
         ]
         if not candidates:
             continue
-        col  = rng.choice(candidates)
-        px   = col * 8
-        py   = (row - 1) * 8          # open cell above the solid tile
+        col = rng.choice(candidates)
+        px = col * 8
+        py = (row - 1) * 8  # open cell above the solid tile
         roll = rng.random()
         if roll < 0.50:
-            spawns.append((px, py, 'crawler'))
+            spawns.append((px, py, "crawler"))
         elif roll < 0.80:
-            spawns.append((px, max(0, py - 24), 'flyer'))
+            spawns.append((px, max(0, py - 24), "flyer"))
         else:
-            spawns.append((px, max(0, py - 24), 'shooty_flier'))
+            spawns.append((px, max(0, py - 24), "shooty_flier"))
     return spawns
 
 
@@ -185,5 +193,5 @@ def _place_pickup(tiles, abs_start, free_l, free_r, artifact_cls):
     """
     mid_c = (free_l + free_r) // 2
     ped_r = abs_start + _SECTION_H // 2
-    tiles[(mid_c, ped_r)] = 1          # pedestal tile
-    return (mid_c, ped_r - 1, artifact_cls)   # pickup sits one row above pedestal
+    tiles[(mid_c, ped_r)] = 1  # pedestal tile
+    return (mid_c, ped_r - 1, artifact_cls)  # pickup sits one row above pedestal

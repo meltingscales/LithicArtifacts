@@ -48,45 +48,49 @@ from scipy.interpolate import interp1d
 # Constants
 # ---------------------------------------------------------------------------
 
+# fmt: off
 SAMPLE_RATE    = 32768   # GBA native (2^15 Hz)
 WAVETABLE_SIZE = 512     # samples per single-cycle wavetable
 REFERENCE_EXTS = {".png", ".jpg", ".jpeg", ".webp", ".bmp"}
+# fmt: on
 
 # ---------------------------------------------------------------------------
 # Shared helpers
 # ---------------------------------------------------------------------------
 
+
 def _save_wav(samples: np.ndarray, path: Path):
     """Write a float32 [-1, 1] mono array to a 16-bit PCM WAV file."""
     peak = np.abs(samples).max()
     if peak > 0:
-        samples = samples / peak          # normalise to full scale
+        samples = samples / peak  # normalise to full scale
     s16 = (samples * 32767).clip(-32768, 32767).astype(np.int16)
     wavfile.write(str(path), SAMPLE_RATE, s16)
 
 
 def _next_index(out_dir: Path) -> int:
     """Return the next free sequential index in out_dir."""
-    used = [
-        int(p.stem) for p in out_dir.glob("*.wav")
-        if p.stem.isdigit()
-    ]
+    used = [int(p.stem) for p in out_dir.glob("*.wav") if p.stem.isdigit()]
     return max(used, default=-1) + 1
 
 
-def _amplitude_envelope(n: int, attack_s: float = 0.02,
-                         release_s: float = 0.08) -> np.ndarray:
+def _amplitude_envelope(
+    n: int, attack_s: float = 0.02, release_s: float = 0.08
+) -> np.ndarray:
+    # fmt: off
     env     = np.ones(n, dtype=np.float32)
     attack  = min(int(attack_s  * SAMPLE_RATE), n // 4)
     release = min(int(release_s * SAMPLE_RATE), n // 4)
     if attack  > 0: env[:attack]   = np.linspace(0.0, 1.0, attack)
     if release > 0: env[-release:] = np.linspace(1.0, 0.0, release)
+    # fmt: on
     return env
 
 
 # ---------------------------------------------------------------------------
 # Mode 1: wavetable — image patch → morphing single-cycle waveform
 # ---------------------------------------------------------------------------
+
 
 def _load_refs(art_dir: Path) -> list[np.ndarray]:
     imgs = []
@@ -104,11 +108,16 @@ def _load_refs(art_dir: Path) -> list[np.ndarray]:
 def _noise_patch_8x8(rng: random.Random) -> np.ndarray:
     """Generate an 8×8 luminance patch from Perlin noise (fallback)."""
     base = rng.uniform(0, 500)
-    patch = np.array([
-        [noise_lib.pnoise2(base + r * 0.4, base + c * 0.4, octaves=3)
-         for c in range(8)]
-        for r in range(8)
-    ], dtype=np.float32)
+    patch = np.array(
+        [
+            [
+                noise_lib.pnoise2(base + r * 0.4, base + c * 0.4, octaves=3)
+                for c in range(8)
+            ]
+            for r in range(8)
+        ],
+        dtype=np.float32,
+    )
     # Normalise to [-1, 1]
     lo, hi = patch.min(), patch.max()
     return (patch - lo) / (hi - lo) * 2 - 1 if hi > lo else patch
@@ -120,9 +129,11 @@ def _image_patch_8x8(imgs: list[np.ndarray], rng: random.Random) -> np.ndarray:
     h, w = img.shape[:2]
     y = rng.randint(0, h - 8)
     x = rng.randint(0, w - 8)
+    # fmt: off
     patch_rgb = img[y:y + 8, x:x + 8]          # (8, 8, 3)
     lum = patch_rgb.mean(axis=2)                 # (8, 8) luminance
     return (lum - 127.5) / 127.5                 # → [-1, 1]
+    # fmt: on
 
 
 def _row_to_wavetable(row: np.ndarray) -> np.ndarray:
@@ -131,31 +142,38 @@ def _row_to_wavetable(row: np.ndarray) -> np.ndarray:
     The waveform wraps seamlessly (first value appended at the end for interp).
     """
     assert len(row) == 8
+    # fmt: off
     x_in  = np.linspace(0.0, 1.0, 8, endpoint=False)
     x_wrap = np.append(x_in, [1.0])
     y_wrap = np.append(row, row[0])
     f      = interp1d(x_wrap, y_wrap, kind="cubic")
+    # fmt: on
     return f(np.linspace(0.0, 1.0, WAVETABLE_SIZE, endpoint=False)).astype(np.float32)
 
 
-def _synthesize_wavetable(tables: list[np.ndarray], pitch: float,
-                           duration: float) -> np.ndarray:
+def _synthesize_wavetable(
+    tables: list[np.ndarray], pitch: float, duration: float
+) -> np.ndarray:
     """
     Morph linearly through `tables` over the clip and read at `pitch` Hz.
     tables: list of WAVETABLE_SIZE float32 arrays in [-1, 1]
     """
+    # fmt: off
     n        = int(SAMPLE_RATE * duration)
     output   = np.zeros(n, dtype=np.float32)
     phase    = 0.0
     phase_inc = pitch * WAVETABLE_SIZE / SAMPLE_RATE   # wavetable-frames per sample
     n_t      = len(tables)
+    # fmt: on
 
     for i in range(n):
+        # fmt: off
         morph  = (i / n) * (n_t - 1)
         ti     = int(morph)
         tf     = morph - ti
         t1     = tables[min(ti,     n_t - 1)]
         t2     = tables[min(ti + 1, n_t - 1)]
+        # fmt: on
 
         pi = int(phase) % WAVETABLE_SIZE
         pf = phase - int(phase)
@@ -170,20 +188,24 @@ def _synthesize_wavetable(tables: list[np.ndarray], pitch: float,
     return output * _amplitude_envelope(n)
 
 
-def run_wavetable(count: int, seed: int, duration: float,
-                  pitch: float, art_dir: Path, out_dir: Path):
+def run_wavetable(
+    count: int, seed: int, duration: float, pitch: float, art_dir: Path, out_dir: Path
+):
     print(f"[wavetable] loading reference images from {art_dir} …")
     refs = _load_refs(art_dir)
     if not refs:
         print("  no reference images found — using Perlin noise patches instead")
 
+    # fmt: off
     rng   = random.Random(seed)
     idx   = _next_index(out_dir)
-    print(f"[wavetable] generating {count} clips  pitch={pitch} Hz  duration={duration}s")
+    # fmt: on
+    print(
+        f"[wavetable] generating {count} clips  pitch={pitch} Hz  duration={duration}s"
+    )
 
     for i in range(count):
-        patch = (_image_patch_8x8(refs, rng) if refs
-                 else _noise_patch_8x8(rng))
+        patch = _image_patch_8x8(refs, rng) if refs else _noise_patch_8x8(rng)
         # Build one wavetable per row; morph through them
         tables = [_row_to_wavetable(patch[r]) for r in range(8)]
         # Randomise pitch slightly (±8%) for variety
@@ -198,14 +220,21 @@ def run_wavetable(count: int, seed: int, duration: float,
 # Mode 2: noise — FM synthesis driven by Perlin noise
 # ---------------------------------------------------------------------------
 
-def _perlin_envelope(duration: float, base: float, scale: float,
-                     octaves: int = 3, lo: float = 0.0,
-                     hi: float = 1.0) -> np.ndarray:
+
+def _perlin_envelope(
+    duration: float,
+    base: float,
+    scale: float,
+    octaves: int = 3,
+    lo: float = 0.0,
+    hi: float = 1.0,
+) -> np.ndarray:
     """
     Sample pnoise1 at audio rate via a coarse grid + linear interpolation.
     base: noise seed offset; scale: rate of change (higher = faster modulation).
     Returns float32 array of length SAMPLE_RATE * duration, mapped to [lo, hi].
     """
+    # fmt: off
     n         = int(SAMPLE_RATE * duration)
     n_coarse  = max(int(duration * 200), 4)    # 200 control-rate samples/sec
     coarse_x  = np.linspace(0.0, duration * scale, n_coarse)
@@ -216,15 +245,22 @@ def _perlin_envelope(duration: float, base: float, scale: float,
     raw       = np.interp(fine_x, coarse_x, coarse_v).astype(np.float32)
     # Normalise pnoise output (roughly in [-0.9, 0.9]) to [lo, hi]
     raw_n     = (raw + 0.9) / 1.8           # → [0, 1]
+    # fmt: on
     return lo + raw_n * (hi - lo)
 
 
-def _synthesize_fm(base_freq: float, fm_ratio: float, fm_index: float,
-                   duration: float, rng: random.Random) -> np.ndarray:
+def _synthesize_fm(
+    base_freq: float,
+    fm_ratio: float,
+    fm_index: float,
+    duration: float,
+    rng: random.Random,
+) -> np.ndarray:
     """
     FM synthesis: out(t) = sin(φ_c(t) + I(t) · sin(φ_m(t)))
     All parameters are slowly modulated by independent Perlin noise tracks.
     """
+    # fmt: off
     n    = int(SAMPLE_RATE * duration)
     b    = rng.uniform(0.0, 1000.0)          # unique noise seed for this clip
 
@@ -244,17 +280,27 @@ def _synthesize_fm(base_freq: float, fm_ratio: float, fm_index: float,
     # Integrate phase sample-by-sample to avoid discontinuities
     phi_c = np.cumsum(2.0 * np.pi * f_c      / SAMPLE_RATE).astype(np.float32)
     phi_m = np.cumsum(2.0 * np.pi * f_c * ratio / SAMPLE_RATE).astype(np.float32)
+    # fmt: on
 
     output = np.sin(phi_c + index * np.sin(phi_m)) * amp
     return output * _amplitude_envelope(n, attack_s=0.03, release_s=0.12)
 
 
-def run_noise(count: int, seed: int, duration: float, base_freq: float,
-              fm_ratio: float, fm_index: float, out_dir: Path):
+def run_noise(
+    count: int,
+    seed: int,
+    duration: float,
+    base_freq: float,
+    fm_ratio: float,
+    fm_index: float,
+    out_dir: Path,
+):
     rng = random.Random(seed)
     idx = _next_index(out_dir)
-    print(f"[noise] generating {count} clips  base_freq={base_freq} Hz  "
-          f"ratio={fm_ratio}  index={fm_index}  duration={duration}s")
+    print(
+        f"[noise] generating {count} clips  base_freq={base_freq} Hz  "
+        f"ratio={fm_ratio}  index={fm_index}  duration={duration}s"
+    )
     for i in range(count):
         samples = _synthesize_fm(base_freq, fm_ratio, fm_index, duration, rng)
         _save_wav(samples, out_dir / f"{idx + i:04d}.wav")
@@ -265,48 +311,78 @@ def run_noise(count: int, seed: int, duration: float, base_freq: float,
 # CLI
 # ---------------------------------------------------------------------------
 
+
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(
         description="Generate audio candidates for Lithic Artifacts.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=__doc__,
     )
-    p.add_argument("--mode", choices=["wavetable", "noise", "both"],
-                   default="both",
-                   help="Generation mode (default: both)")
-    p.add_argument("--count",    type=int,   default=32,
-                   help="Clips per mode (default: 32)")
-    p.add_argument("--seed",     type=int,   default=42,
-                   help="Random seed (default: 42)")
-    p.add_argument("--duration", type=float, default=1.0,
-                   help="Clip length in seconds (default: 1.0)")
+    p.add_argument(
+        "--mode",
+        choices=["wavetable", "noise", "both"],
+        default="both",
+        help="Generation mode (default: both)",
+    )
+    p.add_argument("--count", type=int, default=32, help="Clips per mode (default: 32)")
+    p.add_argument("--seed", type=int, default=42, help="Random seed (default: 42)")
+    p.add_argument(
+        "--duration",
+        type=float,
+        default=1.0,
+        help="Clip length in seconds (default: 1.0)",
+    )
     # Wavetable
-    p.add_argument("--pitch",    type=float, default=220.0,
-                   help="[wavetable] Fundamental pitch in Hz (default: 220)")
+    p.add_argument(
+        "--pitch",
+        type=float,
+        default=220.0,
+        help="[wavetable] Fundamental pitch in Hz (default: 220)",
+    )
     # Noise / FM
-    p.add_argument("--base-freq", type=float, default=110.0,
-                   help="[noise] FM carrier base frequency in Hz (default: 110)")
-    p.add_argument("--fm-ratio",  type=float, default=2.0,
-                   help="[noise] FM modulator-to-carrier ratio (default: 2.0)")
-    p.add_argument("--fm-index",  type=float, default=3.0,
-                   help="[noise] FM modulation index / depth (default: 3.0)")
+    p.add_argument(
+        "--base-freq",
+        type=float,
+        default=110.0,
+        help="[noise] FM carrier base frequency in Hz (default: 110)",
+    )
+    p.add_argument(
+        "--fm-ratio",
+        type=float,
+        default=2.0,
+        help="[noise] FM modulator-to-carrier ratio (default: 2.0)",
+    )
+    p.add_argument(
+        "--fm-index",
+        type=float,
+        default=3.0,
+        help="[noise] FM modulation index / depth (default: 3.0)",
+    )
     return p.parse_args()
 
 
 def main():
-    args    = parse_args()
-    here    = Path(__file__).parent
+    args = parse_args()
+    here = Path(__file__).parent
     art_dir = here.parent / "art-direction"
     out_dir = here / "candidates" / "audio"
     out_dir.mkdir(parents=True, exist_ok=True)
 
     if args.mode in ("wavetable", "both"):
-        run_wavetable(args.count, args.seed, args.duration,
-                      args.pitch, art_dir, out_dir)
+        run_wavetable(
+            args.count, args.seed, args.duration, args.pitch, art_dir, out_dir
+        )
 
     if args.mode in ("noise", "both"):
-        run_noise(args.count, args.seed, args.duration,
-                  args.base_freq, args.fm_ratio, args.fm_index, out_dir)
+        run_noise(
+            args.count,
+            args.seed,
+            args.duration,
+            args.base_freq,
+            args.fm_ratio,
+            args.fm_index,
+            out_dir,
+        )
 
     print(f"\nDone. Candidates in: {out_dir.resolve()}")
 

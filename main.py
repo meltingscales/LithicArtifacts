@@ -2,10 +2,13 @@ import math
 import pyxel
 import random
 
+# fmt: off
 from artifacts import SpiralBorer, Wallbreaker
 from enemies   import Crawler, Flyer, ShootyFlier, EnemyBullet
 from worldgen  import gen_section, SECTION_H
+# fmt: on
 
+# fmt: off
 SCREEN_W = 240
 SCREEN_H = 160
 TILE     = 8
@@ -42,12 +45,14 @@ P_W       = TILE
 P_H       = TILE * 2
 P_HIT_INS = 1       # horizontal inset for floor/ceiling checks; lets player slip into 1-tile gaps
 
-PREAMBLE_ROWS  = 15                # hardcoded entrance rows; sections begin here
-_ARTIFACT_POOL = [SpiralBorer, Wallbreaker]     # artifact classes that can appear as world pickups
+PREAMBLE_ROWS  = 15                          # hardcoded entrance rows; sections begin here
+_ARTIFACT_POOL = [SpiralBorer, Wallbreaker]  # artifact classes that can appear as world pickups
+# fmt: on
 
 
 class World:
     def __init__(self, seed=0):
+        # fmt: off
         self.tiles          = {}
         self.rng            = random.Random(seed)
         self.pending_spawns = []   # [(px_x, px_y, type_str)] drained by Game each frame
@@ -56,13 +61,16 @@ class World:
         self._free_l        = COLS // 4        # initial corridor bounds
         self._free_r        = 3 * COLS // 4
         self._next_art_sec  = self.rng.randint(1, 3)   # section index for first artifact
+        # fmt: on
 
         # Hardcoded entrance (rows 0 – PREAMBLE_ROWS-1)
-        for x in range(COLS):          # solid ceiling
+        for x in range(COLS):  # solid ceiling
             self.tiles[(x, 0)] = 1
         for y in range(1, PREAMBLE_ROWS):  # boundary walls only
+            # fmt: off
             self.tiles[(0, y)]          = 1
             self.tiles[(COLS - 1, y)]   = 1
+            # fmt: on
         gap = self.rng.randint(5, COLS - 10)
         for x in range(1, COLS - 1):  # first platform at row 8
             if not (gap <= x < gap + 5):
@@ -84,7 +92,7 @@ class World:
         """Generate sections until at least n_sections exist."""
         while self._gen_sections < n_sections:
             abs_start = PREAMBLE_ROWS + self._gen_sections * SECTION_H
-            art_cls   = self._pick_artifact_cls()
+            art_cls   = self._pick_artifact_cls()  # fmt: skip
             tiles, spawns, pickup_spec, fl, fr = gen_section(
                 self.rng, abs_start, self._free_l, self._free_r, art_cls
             )
@@ -93,8 +101,10 @@ class World:
             if pickup_spec is not None:
                 col, row, cls = pickup_spec
                 self.pickups.append(WorldPickup(col * TILE, row * TILE, cls))
+            # fmt: off
             self._free_l       = fl
             self._free_r       = fr
+            # fmt: on
             self._gen_sections += 1
 
     def ensure_gen(self, row):
@@ -117,13 +127,15 @@ class Bullet:
 
     def __init__(self, x, y, dx, dy):
         mag = math.sqrt(dx * dx + dy * dy)
-        self.x              = float(x)
-        self.y              = float(y)
-        self.vx             = dx / mag * BULLET_SPEED
-        self.vy             = dy / mag * BULLET_SPEED
-        self.life           = self.LIFETIME
-        self.alive          = True
-        self.can_break_walls = False   # set True by Wallbreaker artifact
+        # fmt: off
+        self.x               = float(x)
+        self.y               = float(y)
+        self.vx              = dx / mag * BULLET_SPEED
+        self.vy              = dy / mag * BULLET_SPEED
+        self.life            = self.LIFETIME
+        self.alive           = True
+        self.can_break_walls = False  # set True by Wallbreaker artifact
+        # fmt: on
 
     def update(self, world):
         self.x += self.vx
@@ -147,15 +159,19 @@ class WorldPickup:
     """An artifact resting in the world on a pedestal, waiting to be collected."""
 
     def __init__(self, x, y, artifact_cls):
+        # fmt: off
         self.x            = float(x)
         self.y            = float(y)
         self.artifact_cls = artifact_cls
         self.collected    = False
+        # fmt: on
 
+    # fmt: off
     @property
     def right(self):  return self.x + TILE
     @property
     def bottom(self): return self.y + TILE
+    # fmt: on
 
     def draw(self, cam):
         sy = int(self.y - cam)
@@ -168,6 +184,7 @@ class WorldPickup:
 
 class Player:
     def __init__(self):
+        # fmt: off
         self.x  = float(SCREEN_W // 2 - P_W // 2)
         self.y  = float(TILE * 2)
         self.vx = 0.0
@@ -191,7 +208,9 @@ class Player:
         self.hp           = 10
         self.max_hp       = 10
         self.inv_cd       = 0    # invincibility frames after taking damage
+        # fmt: on
 
+    # fmt: off
     @property
     def right(self):  return self.x + P_W
     @property
@@ -200,12 +219,15 @@ class Player:
     def gun_x(self):  return self.x + P_W / 2
     @property
     def gun_y(self):  return self.y + (2 if self.crouching else P_H // 4)
+    # fmt: on
 
 
+# fmt: off
 DEBUG_ITEMS = [
     ("Spiral Borer", SpiralBorer),
     ("Wallbreaker",  Wallbreaker),
 ]
+# fmt: on
 
 
 class Game:
@@ -217,6 +239,7 @@ class Game:
         pyxel.sounds[0].set("e3d3c3", "t", "543", "nnn", 10)
         # Sound 1: flyer shoot (noise burst with fadeout)
         pyxel.sounds[1].set("a4", "n", "7", "f", 5)
+        # fmt: off
         self.world        = World(seed=42)
         self.player       = Player()
         self.bullets      = []
@@ -238,21 +261,29 @@ class Game:
         # Debug menu state
         self.debug_open   = False
         self.debug_cursor = 0
+        # fmt: on
         pyxel.run(self.update, self.draw)
 
     # ---- debug menu ----
 
     def _update_debug(self):
         n = len(DEBUG_ITEMS)
-        if pyxel.btnp(pyxel.KEY_UP)   or pyxel.btnp(pyxel.KEY_K):
+        if pyxel.btnp(pyxel.KEY_UP) or pyxel.btnp(pyxel.KEY_K):
             self.debug_cursor = (self.debug_cursor - 1) % n
         if pyxel.btnp(pyxel.KEY_DOWN) or pyxel.btnp(pyxel.KEY_J):
             self.debug_cursor = (self.debug_cursor + 1) % n
         if pyxel.btnp(pyxel.KEY_Z) or pyxel.btnp(pyxel.KEY_RETURN):
             _, cls = DEBUG_ITEMS[self.debug_cursor]
             inv_hit = next((a for a in self.inventory if isinstance(a, cls)), None)
-            bod_pos = next(((r, c) for r in range(5) for c in range(5)
-                            if isinstance(self.body_grid[r][c], cls)), None)
+            bod_pos = next(
+                (
+                    (r, c)
+                    for r in range(5)
+                    for c in range(5)
+                    if isinstance(self.body_grid[r][c], cls)
+                ),
+                None,
+            )
             if inv_hit:
                 self.inventory.remove(inv_hit)
             elif bod_pos:
@@ -265,26 +296,27 @@ class Game:
             self.debug_open = False
 
     def _draw_debug(self):
-        p      = self.player
-        lines  = len(DEBUG_ITEMS)
-        pw     = 150
-        ph     = 24 + lines * 10
-        px0    = 4
-        py0    = 4
+        p = self.player
+        lines = len(DEBUG_ITEMS)
+        pw = 150
+        ph = 24 + lines * 10
+        px0 = 4
+        py0 = 4
         pyxel.rect(px0, py0, pw, ph, BLACK)
         pyxel.rectb(px0, py0, pw, ph, LIGHT_GRAY)
-        pyxel.text(px0 + 4, py0 + 4,  "-- DEBUG --", YELLOW)
+        pyxel.text(px0 + 4, py0 + 4, "-- DEBUG --", YELLOW)
         pyxel.text(px0 + 60, py0 + 4, "Z:toggle  Esc/F1:close", DARK_GRAY)
         for i, (label, cls) in enumerate(DEBUG_ITEMS):
-            has    = (any(isinstance(a, cls) for a in self.inventory) or
-                      any(isinstance(self.body_grid[r][c], cls)
-                          for r in range(5) for c in range(5)
-                          if self.body_grid[r][c] is not None))
+            has = any(isinstance(a, cls) for a in self.inventory) or any(
+                isinstance(self.body_grid[r][c], cls)
+                for r in range(5)
+                for c in range(5)
+                if self.body_grid[r][c] is not None
+            )
             marker = "[x]" if has else "[ ]"
             cursor = ">" if i == self.debug_cursor else " "
-            color  = YELLOW if i == self.debug_cursor else LIGHT_GRAY
-            pyxel.text(px0 + 4, py0 + 14 + i * 10,
-                       f"{cursor} {marker} {label}", color)
+            color = YELLOW if i == self.debug_cursor else LIGHT_GRAY
+            pyxel.text(px0 + 4, py0 + 14 + i * 10, f"{cursor} {marker} {label}", color)
 
     # ---- pause / body panel ----
 
@@ -294,15 +326,17 @@ class Game:
             a for row in self.body_grid for a in row if a is not None
         ]
         if not any(isinstance(a, SpiralBorer) for a in self.player.artifacts):
-            self.player.burrowing  = False
-            self.player.crouching  = False
+            self.player.burrowing = False
+            self.player.crouching = False
 
     # ---- pickup dialogue ----
 
     def _update_pickup_dialogue(self):
-        if (pyxel.btnp(pyxel.KEY_Z) or
-                pyxel.btnp(pyxel.GAMEPAD1_BUTTON_X) or
-                pyxel.btnp(pyxel.KEY_RETURN)):
+        if (
+            pyxel.btnp(pyxel.KEY_Z)
+            or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_X)
+            or pyxel.btnp(pyxel.KEY_RETURN)
+        ):
             self.pickup_dialogue = None
 
     def _draw_pickup_dialogue(self, cls):
@@ -311,7 +345,7 @@ class Game:
         py0 = (SCREEN_H - ph) // 2
         pyxel.rect(px0, py0, pw, ph, BLACK)
         pyxel.rectb(px0, py0, pw, ph, YELLOW)
-        pyxel.text(px0 + 4, py0 + 5,  "ARTIFACT FOUND", ORANGE)
+        pyxel.text(px0 + 4, py0 + 5, "ARTIFACT FOUND", ORANGE)
         pyxel.line(px0 + 1, py0 + 14, px0 + pw - 2, py0 + 14, DARK_GRAY)
         pyxel.text(px0 + 4, py0 + 20, f"{cls.glyph}  {cls.name}", YELLOW)
         for i, ln in enumerate(self._wrap(cls.description, 46)[:3]):
@@ -335,7 +369,7 @@ class Game:
         if a is None:
             return
         self.body_grid[r][c] = None
-        self.held     = a
+        self.held = a
         self.held_src = ("body", r, c)
         self._sync_artifacts()
 
@@ -344,7 +378,7 @@ class Game:
             return
         a = self.inventory.pop(self.inv_cursor)
         self.inv_cursor = min(self.inv_cursor, max(0, len(self.inventory) - 1))
-        self.held     = a
+        self.held = a
         self.held_src = ("inv", self.inv_cursor)
 
     def _place_on_body(self, r, c):
@@ -352,14 +386,14 @@ class Game:
         self.body_grid[r][c] = self.held
         if other is not None:
             self._return_to_src(other)
-        self.held     = None
+        self.held = None
         self.held_src = None
         self._sync_artifacts()
 
     def _place_in_inventory(self):
         idx = min(self.inv_cursor, len(self.inventory))
         self.inventory.insert(idx, self.held)
-        self.held     = None
+        self.held = None
         self.held_src = None
 
     def _cancel_hold(self):
@@ -371,7 +405,7 @@ class Game:
         else:
             i = pos[0]
             self.inventory.insert(min(i, len(self.inventory)), self.held)
-        self.held     = None
+        self.held = None
         self.held_src = None
 
     def _return_to_src(self, artifact):
@@ -388,49 +422,74 @@ class Game:
 
     def _update_pause(self):
         # Tab / LB / RB: switch panels
-        if (pyxel.btnp(pyxel.KEY_TAB) or
-                pyxel.btnp(pyxel.GAMEPAD1_BUTTON_LEFTSHOULDER) or
-                pyxel.btnp(pyxel.GAMEPAD1_BUTTON_RIGHTSHOULDER)):
+        if (
+            pyxel.btnp(pyxel.KEY_TAB)
+            or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_LEFTSHOULDER)
+            or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_RIGHTSHOULDER)
+        ):
             self.pause_panel = 1 - self.pause_panel
             return
 
         # Escape / Start / B: cancel hold or close menu
-        if (pyxel.btnp(pyxel.KEY_ESCAPE) or
-                pyxel.btnp(pyxel.GAMEPAD1_BUTTON_START) or
-                pyxel.btnp(pyxel.GAMEPAD1_BUTTON_B)):
+        if (
+            pyxel.btnp(pyxel.KEY_ESCAPE)
+            or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_START)
+            or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_B)
+        ):
             if self.held:
                 self._cancel_hold()
             else:
                 self.paused = False
             return
 
-        up   = (pyxel.btnp(pyxel.KEY_UP)    or pyxel.btnp(pyxel.KEY_K) or
-                pyxel.btnp(pyxel.GAMEPAD1_BUTTON_DPAD_UP))
-        down = (pyxel.btnp(pyxel.KEY_DOWN)  or pyxel.btnp(pyxel.KEY_J) or
-                pyxel.btnp(pyxel.GAMEPAD1_BUTTON_DPAD_DOWN))
-        left = (pyxel.btnp(pyxel.KEY_LEFT)  or pyxel.btnp(pyxel.KEY_H) or
-                pyxel.btnp(pyxel.GAMEPAD1_BUTTON_DPAD_LEFT))
-        rght = (pyxel.btnp(pyxel.KEY_RIGHT) or pyxel.btnp(pyxel.KEY_L) or
-                pyxel.btnp(pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT))
-        act  = (pyxel.btnp(pyxel.KEY_Z)     or pyxel.btnp(pyxel.KEY_RETURN) or
-                pyxel.btnp(pyxel.GAMEPAD1_BUTTON_A))
+        up = (
+            pyxel.btnp(pyxel.KEY_UP)
+            or pyxel.btnp(pyxel.KEY_K)
+            or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_DPAD_UP)
+        )
+        down = (
+            pyxel.btnp(pyxel.KEY_DOWN)
+            or pyxel.btnp(pyxel.KEY_J)
+            or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_DPAD_DOWN)
+        )
+        left = (
+            pyxel.btnp(pyxel.KEY_LEFT)
+            or pyxel.btnp(pyxel.KEY_H)
+            or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_DPAD_LEFT)
+        )
+        rght = (
+            pyxel.btnp(pyxel.KEY_RIGHT)
+            or pyxel.btnp(pyxel.KEY_L)
+            or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT)
+        )
+        act = (
+            pyxel.btnp(pyxel.KEY_Z)
+            or pyxel.btnp(pyxel.KEY_RETURN)
+            or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_A)
+        )
 
-        if self.pause_panel == 0:   # body grid
+        if self.pause_panel == 0:  # body grid
             r, c = self.body_cursor
-            if up:    r = max(0, r - 1)
-            if down:  r = min(4, r + 1)
-            if left:  c = max(0, c - 1)
-            if rght:  c = min(4, c + 1)
+            if up:
+                r = max(0, r - 1)
+            if down:
+                r = min(4, r + 1)
+            if left:
+                c = max(0, c - 1)
+            if rght:
+                c = min(4, c + 1)
             self.body_cursor = [r, c]
             if act:
                 if self.held:
                     self._place_on_body(r, c)
                 else:
                     self._pickup_from_body(r, c)
-        else:                       # inventory list
+        else:  # inventory list
             n = len(self.inventory)
-            if up:   self.inv_cursor = max(0, self.inv_cursor - 1)
-            if down: self.inv_cursor = min(max(0, n - 1), self.inv_cursor + 1)
+            if up:
+                self.inv_cursor = max(0, self.inv_cursor - 1)
+            if down:
+                self.inv_cursor = min(max(0, n - 1), self.inv_cursor + 1)
             if act:
                 if self.held:
                     self._place_in_inventory()
@@ -440,7 +499,7 @@ class Game:
         # Hover-timer: reset whenever cursor lands on a different artifact
         hov = self._hovered_artifact()
         if hov is not self.hover_key:
-            self.hover_key   = hov
+            self.hover_key = hov
             self.hover_timer = 0
         else:
             self.hover_timer += 1
@@ -451,19 +510,20 @@ class Game:
         # Panel headers
         bc = YELLOW if self.pause_panel == 0 else LIGHT_GRAY
         ic = YELLOW if self.pause_panel == 1 else LIGHT_GRAY
-        pyxel.text(_GX, 4, "BODY",              bc)
-        pyxel.text(_IX, 4, "INVENTORY",          ic)
+        pyxel.text(_GX, 4, "BODY", bc)
+        pyxel.text(_IX, 4, "INVENTORY", ic)
         pyxel.text(170, 4, "TAB:switch Esc:close", DARK_GRAY)
 
         # Body grid
         for r in range(5):
             for c in range(5):
-                x0     = _GX + c * _CELL
-                y0     = _GY + r * _CELL
-                is_cur = (self.pause_panel == 0 and self.body_cursor == [r, c])
-                a      = self.body_grid[r][c]
-                pyxel.rectb(x0, y0, _CELL - 1, _CELL - 1,
-                            YELLOW if is_cur else DARK_GRAY)
+                x0 = _GX + c * _CELL
+                y0 = _GY + r * _CELL
+                is_cur = self.pause_panel == 0 and self.body_cursor == [r, c]
+                a = self.body_grid[r][c]
+                pyxel.rectb(
+                    x0, y0, _CELL - 1, _CELL - 1, YELLOW if is_cur else DARK_GRAY
+                )
                 if is_cur and self.held:
                     pyxel.text(x0 + 3, y0 + 3, self.held.glyph, ORANGE)
                 elif a:
@@ -472,21 +532,21 @@ class Game:
         # "HOLDING" indicator below the grid
         if self.held:
             hy = _GY + 5 * _CELL + 3
-            pyxel.text(_GX, hy,     f"HOLD:{self.held.glyph} {self.held.name}", ORANGE)
+            pyxel.text(_GX, hy, f"HOLD:{self.held.glyph} {self.held.name}", ORANGE)
             pyxel.text(_GX, hy + 9, "Z:place  Esc:cancel", DARK_GRAY)
 
         # Inventory list (scrolling)
         max_vis = (_TIPY - _IY - 2) // _IRH
-        scroll  = max(0, self.inv_cursor - max_vis + 1)
+        scroll = max(0, self.inv_cursor - max_vis + 1)
         if not self.inventory:
             pyxel.text(_IX, _IY, "(empty)", DARK_GRAY)
         for i, a in enumerate(self.inventory):
             vi = i - scroll
             if vi < 0 or vi >= max_vis:
                 continue
-            is_cur = (self.pause_panel == 1 and self.inv_cursor == i)
-            col    = YELLOW if is_cur else LIGHT_GRAY
-            pre    = ">" if is_cur else " "
+            is_cur = self.pause_panel == 1 and self.inv_cursor == i
+            col = YELLOW if is_cur else LIGHT_GRAY
+            pre = ">" if is_cur else " "
             pyxel.text(_IX, _IY + vi * _IRH, f"{pre}{a.glyph} {a.name}", col)
 
         # Tooltip
@@ -521,35 +581,47 @@ class Game:
     # ---- input ----
 
     def _left(self):
-        return (pyxel.btn(pyxel.KEY_LEFT) or pyxel.btn(pyxel.KEY_H) or
-                pyxel.btn(pyxel.GAMEPAD1_BUTTON_DPAD_LEFT))
+        return (
+            pyxel.btn(pyxel.KEY_LEFT)
+            or pyxel.btn(pyxel.KEY_H)
+            or pyxel.btn(pyxel.GAMEPAD1_BUTTON_DPAD_LEFT)
+        )
 
     def _right(self):
-        return (pyxel.btn(pyxel.KEY_RIGHT) or pyxel.btn(pyxel.KEY_L) or
-                pyxel.btn(pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT))
+        return (
+            pyxel.btn(pyxel.KEY_RIGHT)
+            or pyxel.btn(pyxel.KEY_L)
+            or pyxel.btn(pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT)
+        )
 
     def _up(self):
-        return (pyxel.btn(pyxel.KEY_UP) or pyxel.btn(pyxel.KEY_K) or
-                pyxel.btn(pyxel.GAMEPAD1_BUTTON_DPAD_UP))
+        return (
+            pyxel.btn(pyxel.KEY_UP)
+            or pyxel.btn(pyxel.KEY_K)
+            or pyxel.btn(pyxel.GAMEPAD1_BUTTON_DPAD_UP)
+        )
 
     def _down(self):
-        return (pyxel.btn(pyxel.KEY_DOWN) or pyxel.btn(pyxel.KEY_J) or
-                pyxel.btn(pyxel.GAMEPAD1_BUTTON_DPAD_DOWN))
+        return (
+            pyxel.btn(pyxel.KEY_DOWN)
+            or pyxel.btn(pyxel.KEY_J)
+            or pyxel.btn(pyxel.GAMEPAD1_BUTTON_DPAD_DOWN)
+        )
 
     def _jump(self):
-        return (pyxel.btnp(pyxel.KEY_SPACE)        or
-                pyxel.btnp(pyxel.KEY_UP)            or
-                pyxel.btnp(pyxel.KEY_K)             or
-                pyxel.btnp(pyxel.GAMEPAD1_BUTTON_A) or
-                pyxel.btnp(pyxel.GAMEPAD1_BUTTON_B))
+        return (
+            pyxel.btnp(pyxel.KEY_SPACE)
+            or pyxel.btnp(pyxel.KEY_UP)
+            or pyxel.btnp(pyxel.KEY_K)
+            or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_A)
+            or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_B)
+        )
 
     def _shoot(self):
-        return (pyxel.btn(pyxel.KEY_Z) or
-                pyxel.btn(pyxel.GAMEPAD1_BUTTON_X))
+        return pyxel.btn(pyxel.KEY_Z) or pyxel.btn(pyxel.GAMEPAD1_BUTTON_X)
 
     def _aim_lock(self):
-        return (pyxel.btn(pyxel.KEY_X) or
-                pyxel.btn(pyxel.GAMEPAD1_BUTTON_LEFTSHOULDER))
+        return pyxel.btn(pyxel.KEY_X) or pyxel.btn(pyxel.GAMEPAD1_BUTTON_LEFTSHOULDER)
 
     # ---- physics ----
 
@@ -562,14 +634,15 @@ class Game:
             return False
         top_row = int(p.y // TILE)
         if blocking_row == top_row + 1 and not self.world.solid(wall_col, top_row):
-            p.state     = "hanging"
+            p.state = "hanging"
             p.hang_wall = wall_dir
-            p.y  = float(top_row * TILE)
-            p.x  = float((wall_col * TILE - P_W) if wall_dir == 1
-                         else (wall_col + 1) * TILE)
-            p.vx     = 0.0
-            p.vy     = 0.0
-            p.aim_dx = -wall_dir   # default: aim away from wall
+            p.y = float(top_row * TILE)
+            p.x = float(
+                (wall_col * TILE - P_W) if wall_dir == 1 else (wall_col + 1) * TILE
+            )
+            p.vx = 0.0
+            p.vy = 0.0
+            p.aim_dx = -wall_dir  # default: aim away from wall
             p.aim_dy = 0
             return True
         return False
@@ -583,7 +656,7 @@ class Game:
                 if self.world.solid(lc, row):
                     if self._try_ledge_grab(p, lc, row, -1):
                         return
-                    p.x  = float((lc + 1) * TILE)
+                    p.x = float((lc + 1) * TILE)
                     p.vx = 0.0
                     p.wall_contact = -1
                     break
@@ -593,7 +666,7 @@ class Game:
                 if self.world.solid(rc, row):
                     if self._try_ledge_grab(p, rc, row, 1):
                         return
-                    p.x  = float(rc * TILE - P_W)
+                    p.x = float(rc * TILE - P_W)
                     p.vx = 0.0
                     p.wall_contact = 1
                     break
@@ -617,13 +690,13 @@ class Game:
         if p.vy < 0:
             tr = int(p.y // TILE)
             if self.world.solid(lc, tr) or self.world.solid(rc, tr):
-                p.y  = float((tr + 1) * TILE)
+                p.y = float((tr + 1) * TILE)
                 p.vy = 0.0
         else:
             br = int(p.bottom // TILE)
             if self.world.solid(lc, br) or self.world.solid(rc, br):
-                p.y         = float(br * TILE - (TILE if p.crouching else P_H))
-                p.vy        = 0.0
+                p.y = float(br * TILE - (TILE if p.crouching else P_H))
+                p.vy = 0.0
                 p.on_ground = True
                 p.jump_type = "none"
 
@@ -663,36 +736,45 @@ class Game:
 
         # F1 debug menu (only when not paused)
         if pyxel.btnp(pyxel.KEY_F1):
-            self.debug_open   = not self.debug_open
+            self.debug_open = not self.debug_open
             self.debug_cursor = 0
         if self.debug_open:
             self._update_debug()
             return
 
         # Tab / Start opens pause menu from gameplay
-        if (pyxel.btnp(pyxel.KEY_TAB) or
-                pyxel.btnp(pyxel.GAMEPAD1_BUTTON_START)):
+        if pyxel.btnp(pyxel.KEY_TAB) or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_START):
             self.paused = True
             return
 
-        p      = self.player
-        adx    = (-1 if self._left() else 0) + (1 if self._right() else 0)
-        jump   = self._jump()
-        down_p = (pyxel.btnp(pyxel.KEY_DOWN) or pyxel.btnp(pyxel.KEY_J) or
-                  pyxel.btnp(pyxel.GAMEPAD1_BUTTON_DPAD_DOWN))
+        p = self.player
+        adx = (-1 if self._left() else 0) + (1 if self._right() else 0)
+        jump = self._jump()
+        down_p = (
+            pyxel.btnp(pyxel.KEY_DOWN)
+            or pyxel.btnp(pyxel.KEY_J)
+            or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_DPAD_DOWN)
+        )
 
-        if p.shoot_cd > 0: p.shoot_cd -= 1
-        if p.wj_cd_l  > 0: p.wj_cd_l  -= 1
-        if p.wj_cd_r  > 0: p.wj_cd_r  -= 1
-        if p.ledge_cd > 0: p.ledge_cd -= 1
-        if p.inv_cd   > 0: p.inv_cd   -= 1
+        if p.shoot_cd > 0:
+            p.shoot_cd -= 1
+        if p.wj_cd_l > 0:
+            p.wj_cd_l -= 1
+        if p.wj_cd_r > 0:
+            p.wj_cd_r -= 1
+        if p.ledge_cd > 0:
+            p.ledge_cd -= 1
+        if p.inv_cd > 0:
+            p.inv_cd -= 1
 
         inputs = {
-            "left":  self._left(),  "right": self._right(),
-            "up":    self._up(),    "down":  self._down(),
-            "jump":  jump,          "shoot": self._shoot(),
-            "burrow": (pyxel.btn(pyxel.KEY_C) or
-                       pyxel.btn(pyxel.GAMEPAD1_BUTTON_Y)),
+            "left": self._left(),
+            "right": self._right(),
+            "up": self._up(),
+            "down": self._down(),
+            "jump": jump,
+            "shoot": self._shoot(),
+            "burrow": (pyxel.btn(pyxel.KEY_C) or pyxel.btn(pyxel.GAMEPAD1_BUTTON_Y)),
         }
         for a in p.artifacts:
             a.on_frame(p, self.world, inputs)
@@ -703,54 +785,57 @@ class Game:
                 # Aim is constrained to 5 directions: up, down, straight-away,
                 # diag-up-away, diag-down-away (nothing toward/into the wall).
                 free = -p.hang_wall
-                ady  = (-1 if self._up() else 0) + (1 if self._down() else 0)
+                ady = (-1 if self._up() else 0) + (1 if self._down() else 0)
                 if adx != 0 or ady != 0:
                     p.aim_dx = free if adx == free else 0
                     p.aim_dy = ady
                 if jump:
-                    p.state    = "normal"
+                    p.state = "normal"
                     p.ledge_cd = 6
-                    p.vy       = JUMP_VEL * 0.75
-                    p.vx       = p.hang_wall * MOVE_SPEED
+                    p.vy = JUMP_VEL * 0.75
+                    p.vx = p.hang_wall * MOVE_SPEED
             else:
                 if self._up() or jump:
                     # Launch upward and inward to land on top of the ledge
-                    p.state    = "normal"
+                    p.state = "normal"
                     p.ledge_cd = 6
-                    p.vy       = JUMP_VEL * 0.75
-                    p.vx       = p.hang_wall * MOVE_SPEED
+                    p.vy = JUMP_VEL * 0.75
+                    p.vx = p.hang_wall * MOVE_SPEED
                 elif self._down() or (adx != 0 and adx == -p.hang_wall):
-                    p.state    = "normal"
+                    p.state = "normal"
                     p.ledge_cd = 6
-                    p.vy       = 0.5
+                    p.vy = 0.5
         else:
             p.aim_locked = self._aim_lock()
 
             if p.crouching:
                 # Any of these uncrouches (if headroom allows): move, up, jump, Down-toggle
                 want_uncrouch = (
-                    (adx != 0 and not p.aim_locked) or
-                    self._up() or jump or down_p
+                    (adx != 0 and not p.aim_locked) or self._up() or jump or down_p
                 )
                 if want_uncrouch:
                     tr = int(p.y // TILE) - 1
                     lc = int((p.x + P_HIT_INS) // TILE)
                     rc = int((p.right - 1 - P_HIT_INS) // TILE)
-                    if tr < 0 or not (self.world.solid(lc, tr) or
-                                      self.world.solid(rc, tr)):
-                        p.y        -= TILE
+                    if tr < 0 or not (
+                        self.world.solid(lc, tr) or self.world.solid(rc, tr)
+                    ):
+                        p.y -= TILE
                         p.crouching = False
                         # Apply normal movement for this frame immediately
                         p.vx = adx * MOVE_SPEED
-                        if adx != 0: p.facing = adx
+                        if adx != 0:
+                            p.facing = adx
                         p.aim_dx = p.facing
                         p.aim_dy = -1 if (self._up() and adx != 0) else 0
 
                 if p.crouching:
                     # Still crouching (ceiling blocked stand-up, or no trigger)
                     p.vx = 0.0
-                    if self._left():  p.facing = -1
-                    if self._right(): p.facing = 1
+                    if self._left():
+                        p.facing = -1
+                    if self._right():
+                        p.facing = 1
                     if p.aim_locked:
                         ady = (-1 if self._up() else 0) + (1 if self._down() else 0)
                         if adx != 0 or ady != 0:
@@ -763,7 +848,7 @@ class Game:
             elif p.aim_locked:
                 # Freeze horizontal movement; direction keys control aim
                 p.vx = 0.0
-                ady  = (-1 if self._up() else 0) + (1 if self._down() else 0)
+                ady = (-1 if self._up() else 0) + (1 if self._down() else 0)
                 if adx != 0 or ady != 0:
                     p.aim_dx = adx
                     p.aim_dy = ady
@@ -780,23 +865,26 @@ class Game:
                 p.aim_dy = -1 if (self._up() and adx != 0) else 0
                 # Toggle crouch on: Down press while on ground, not burrowing
                 if p.on_ground and down_p and not p.burrowing:
-                    p.y        += TILE
+                    p.y += TILE
                     p.crouching = True
-                    p.vx        = 0.0
+                    p.vx = 0.0
 
-            if jump and not p.burrowing and not p.crouching:  # crouching uncrouches above
+            if (
+                jump and not p.burrowing and not p.crouching
+            ):  # crouching uncrouches above
                 if p.on_ground:
-                    p.vy        = JUMP_VEL
+                    p.vy = JUMP_VEL
                     p.on_ground = False
                     p.jump_type = "spin" if adx != 0 else "straight"
                     if p.jump_type == "straight":
                         p.vx = 0.0
                 elif p.wall_contact != 0:
-                    can = ((p.wall_contact == -1 and p.wj_cd_l == 0) or
-                           (p.wall_contact ==  1 and p.wj_cd_r == 0))
+                    can = (p.wall_contact == -1 and p.wj_cd_l == 0) or (
+                        p.wall_contact == 1 and p.wj_cd_r == 0
+                    )
                     if can:
-                        p.vy        = WALL_JUMP_VEL
-                        p.vx        = -p.wall_contact * WALL_JUMP_HVX
+                        p.vy = WALL_JUMP_VEL
+                        p.vx = -p.wall_contact * WALL_JUMP_HVX
                         p.jump_type = "spin"
                         if p.wall_contact == -1:
                             p.wj_cd_l = WALL_JUMP_CD
@@ -828,8 +916,9 @@ class Game:
             if not b.alive:
                 continue
             for e in self.enemies:
-                if e.alive and (b.x < e.right and b.x + 2 > e.x and
-                                b.y < e.bottom and b.y + 2 > e.y):
+                if e.alive and (
+                    b.x < e.right and b.x + 2 > e.x and b.y < e.bottom and b.y + 2 > e.y
+                ):
                     e.take_damage(1)
                     b.alive = False
                     break
@@ -862,16 +951,24 @@ class Game:
         # Damage player (enemy contact, then enemy bullets; one source per inv window)
         if p.inv_cd == 0:
             for e in self.enemies:
-                if e.alive and (p.x < e.right and p.right > e.x and
-                                p.y < e.bottom and p.bottom > e.y):
-                    p.hp    = max(0, p.hp - e.damage)
+                if e.alive and (
+                    p.x < e.right
+                    and p.right > e.x
+                    and p.y < e.bottom
+                    and p.bottom > e.y
+                ):
+                    p.hp = max(0, p.hp - e.damage)
                     p.inv_cd = 60
                     break
             else:
                 for eb in self.enemy_bullets:
-                    if eb.alive and (p.x < eb.x + 2 and p.right > eb.x and
-                                     p.y < eb.y + 2 and p.bottom > eb.y):
-                        p.hp     = max(0, p.hp - 1)
+                    if eb.alive and (
+                        p.x < eb.x + 2
+                        and p.right > eb.x
+                        and p.y < eb.y + 2
+                        and p.bottom > eb.y
+                    ):
+                        p.hp = max(0, p.hp - 1)
                         p.inv_cd = 60
                         eb.alive = False
                         break
@@ -879,24 +976,31 @@ class Game:
         # Pickup collection
         for pu in self.world.pickups:
             if not pu.collected and (
-                    p.x < pu.right and p.right > pu.x and
-                    p.y < pu.bottom and p.bottom > pu.y):
-                pu.collected         = True
+                p.x < pu.right
+                and p.right > pu.x
+                and p.y < pu.bottom
+                and p.bottom > pu.y
+            ):
+                pu.collected = True
                 self.inventory.append(pu.artifact_cls())
                 self.pickup_dialogue = pu.artifact_cls
                 break
 
         # Cull dead / off-screen-above objects
         cull_y = self.cam_y - SCREEN_H * 3
-        self.enemies       = [e  for e  in self.enemies       if e.alive  and e.y  > cull_y]
-        self.enemy_bullets = [eb for eb in self.enemy_bullets if eb.alive and eb.y > cull_y]
-        self.world.pickups = [pu for pu in self.world.pickups if not pu.collected and pu.y > cull_y]
+        self.enemies = [e for e in self.enemies if e.alive and e.y > cull_y]
+        self.enemy_bullets = [
+            eb for eb in self.enemy_bullets if eb.alive and eb.y > cull_y
+        ]
+        self.world.pickups = [
+            pu for pu in self.world.pickups if not pu.collected and pu.y > cull_y
+        ]
 
         self.world.ensure_gen(int(p.bottom // TILE) + 40)
 
-        target     = p.y - SCREEN_H * 0.33
+        target = p.y - SCREEN_H * 0.33
         self.cam_y += (target - self.cam_y) * 0.12
-        self.cam_y  = max(0.0, self.cam_y)
+        self.cam_y = max(0.0, self.cam_y)
 
     def draw(self):
         if self.paused:
@@ -904,9 +1008,9 @@ class Game:
             return
 
         pyxel.cls(BLACK)
-        cam   = self.cam_y
+        cam = self.cam_y
         first = max(0, int(cam // TILE) - 1)
-        last  = first + (SCREEN_H // TILE) + 3
+        last = first + (SCREEN_H // TILE) + 3
 
         for row in range(first, last):
             for col in range(COLS):
@@ -928,7 +1032,7 @@ class Game:
         for pu in self.world.pickups:
             pu.draw(cam)
 
-        p  = self.player
+        p = self.player
         px = int(p.x)
         py = int(p.y - cam)
 
@@ -936,22 +1040,22 @@ class Game:
         if p.inv_cd > 0 and (pyxel.frame_count // 4) % 2:
             pass  # skip draw this frame
         elif p.state == "hanging":
-            pyxel.text(px + 2, py + 1,        "@", YELLOW)
+            pyxel.text(px + 2, py + 1, "@", YELLOW)
             pyxel.text(px + 2, py + TILE + 1, "n", YELLOW)
         elif p.crouching:
             pyxel.text(px + 2, py + 1, "@", YELLOW)
         elif p.burrowing:
-            pyxel.text(px + 2, py + 1,        "@", YELLOW)
+            pyxel.text(px + 2, py + 1, "@", YELLOW)
             pyxel.text(px + 2, py + TILE + 1, "v", YELLOW)
         elif not p.on_ground and p.jump_type == "straight":
-            pyxel.text(px + 2, py + 1,        "@", YELLOW)
+            pyxel.text(px + 2, py + 1, "@", YELLOW)
             pyxel.text(px + 2, py + TILE + 1, "|", YELLOW)
         elif not p.on_ground and p.jump_type == "spin":
             body = "*" if (pyxel.frame_count // 4) % 2 else "o"
-            pyxel.text(px + 2, py + 1,        "@", YELLOW)
+            pyxel.text(px + 2, py + 1, "@", YELLOW)
             pyxel.text(px + 2, py + TILE + 1, body, YELLOW)
         else:
-            pyxel.text(px + 2, py + 1,        "@", YELLOW)
+            pyxel.text(px + 2, py + 1, "@", YELLOW)
             pyxel.text(px + 2, py + TILE + 1, "W", YELLOW)
 
         # Aim reticle when locked

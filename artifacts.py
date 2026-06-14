@@ -6,13 +6,17 @@ Each frame, Game calls artifact.on_frame(player, world, inputs) for every
 equipped artifact. Other hooks fire on specific events.
 """
 
+# fmt: off
 _TILE = 8   # mirror of TILE in main.py
+# fmt: on
 
 
 class Artifact:
+    # fmt: off
     name        = ""
     glyph       = "?"
     description = ""
+    # fmt: on
 
     def on_frame(self, player, world, inputs):
         """Called once per frame.
@@ -30,9 +34,12 @@ class Artifact:
 
 class Wallbreaker(Artifact):
     """Shots destroy solid tiles on impact."""
+
+    # fmt: off
     name        = "Wallbreaker"
     glyph       = "W"
     description = "Your shots punch through solid walls, destroying tiles on impact."
+    # fmt: on
 
     def on_shoot(self, player, bullet):
         bullet.can_break_walls = True
@@ -41,10 +48,13 @@ class Wallbreaker(Artifact):
 class SpiralBorer(Artifact):
     """Phase downward through solid floors without destroying them.
     Entering is a commitment — burrowing ends only when you emerge below."""
+
+    # fmt: off
     name        = "Spiral Borer"
     glyph       = "B"
     description = ("Phase through solid floors without destroying them. "
                    "Commitment — burrowing ends only when you emerge below.")
+    # fmt: on
 
     def on_frame(self, player, world, inputs):
         if player.burrowing:
@@ -53,7 +63,7 @@ class SpiralBorer(Artifact):
         elif player.on_ground and player.crouching and inputs["burrow"]:
             player.burrowing = True
             player.on_ground = False
-            player.vy        = 1.0   # seed downward velocity into the floor
+            player.vy = 1.0  # seed downward velocity into the floor
 
     @staticmethod
     def _emerged(player, world):

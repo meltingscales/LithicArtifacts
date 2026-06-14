@@ -32,6 +32,7 @@ from PIL import Image
 # ---------------------------------------------------------------------------
 # Pyxel default 16-color palette (RGB)
 # ---------------------------------------------------------------------------
+# fmt: off
 PYXEL_PALETTE = [
     (0,   0,   0),    # 0  black
     (43,  51,  95),   # 1  dark navy
@@ -50,6 +51,8 @@ PYXEL_PALETTE = [
     (255, 119, 168),  # 14 pink
     (255, 204, 170),  # 15 peach
 ]
+# fmt: on
+
 
 # Build a Pillow palette image for quantization (768 bytes: 256 * RGB, padded)
 def _build_palette_image() -> Image.Image:
@@ -62,6 +65,7 @@ def _build_palette_image() -> Image.Image:
     pal_img.putpalette(pal_flat)
     return pal_img
 
+
 PAL_IMG = _build_palette_image()
 
 
@@ -70,11 +74,13 @@ def snap_to_palette(patch: np.ndarray) -> np.ndarray:
     Snap every pixel in an HxWx3 uint8 array to the nearest Pyxel palette color.
     Returns HxWx3 uint8.
     """
-    pal = np.array(PYXEL_PALETTE, dtype=np.float32)   # (16, 3)
-    flat = patch.reshape(-1, 3).astype(np.float32)     # (N, 3)
+    # fmt: off
+    pal     = np.array(PYXEL_PALETTE, dtype=np.float32)                    # (16, 3)
+    flat    = patch.reshape(-1, 3).astype(np.float32)                      # (N, 3)
     # Squared Euclidean distance to each palette entry
-    dists = np.sum((flat[:, None, :] - pal[None, :, :]) ** 2, axis=2)  # (N, 16)
-    indices = np.argmin(dists, axis=1)                  # (N,)
+    dists   = np.sum((flat[:, None, :] - pal[None, :, :]) ** 2, axis=2)  # (N, 16)
+    indices = np.argmin(dists, axis=1)                                     # (N,)
+    # fmt: on
     return pal[indices].reshape(patch.shape).astype(np.uint8)
 
 
@@ -84,8 +90,7 @@ def save_candidate(patch: np.ndarray, path: Path, preview_scale: int = 8):
     img = Image.fromarray(patch, "RGB")
     img.save(path)
     # Also save an upscaled preview so it's easy to eyeball
-    preview = img.resize((8 * preview_scale, 8 * preview_scale),
-                          resample=Image.NEAREST)
+    preview = img.resize((8 * preview_scale, 8 * preview_scale), resample=Image.NEAREST)
     preview.save(path.with_stem(path.stem + "_preview"))
 
 
@@ -94,6 +99,7 @@ def save_candidate(patch: np.ndarray, path: Path, preview_scale: int = 8):
 # ---------------------------------------------------------------------------
 
 REFERENCE_EXTS = {".png", ".jpg", ".jpeg", ".webp", ".bmp"}
+
 
 def load_reference_images(art_dir: Path) -> list[np.ndarray]:
     imgs = []
@@ -121,7 +127,7 @@ def generate_sample(refs: list[np.ndarray], rng: random.Random) -> np.ndarray | 
         return None
     y = rng.randint(0, h - 8)
     x = rng.randint(0, w - 8)
-    patch = img[y:y + 8, x:x + 8, :3]
+    patch = img[y : y + 8, x : x + 8, :3]
     return snap_to_palette(patch)
 
 
@@ -129,13 +135,24 @@ def run_sample(count: int, seed: int, art_dir: Path, out_dir: Path):
     print(f"[sample] Loading reference images from {art_dir} …")
     refs = load_reference_images(art_dir)
     if not refs:
-        print("ERROR: no reference images found. Add .png/.webp files to "
-              f"{art_dir}", file=sys.stderr)
+        print(
+            f"ERROR: no reference images found. Add .png/.webp files to {art_dir}",
+            file=sys.stderr,
+        )
         sys.exit(1)
 
     rng = random.Random(seed)
-    existing = max((int(p.stem.split("_")[0]) for p in out_dir.glob("*.png")
-                    if p.stem.split("_")[0].isdigit()), default=-1) + 1
+    existing = (
+        max(
+            (
+                int(p.stem.split("_")[0])
+                for p in out_dir.glob("*.png")
+                if p.stem.split("_")[0].isdigit()
+            ),
+            default=-1,
+        )
+        + 1
+    )
     saved = 0
     attempts = 0
     while saved < count and attempts < count * 20:
@@ -154,9 +171,10 @@ def run_sample(count: int, seed: int, art_dir: Path, out_dir: Path):
 # Mode 2: noise — Perlin/Simplex noise → palette
 # ---------------------------------------------------------------------------
 
-def generate_noise_patch(rng: random.Random, scale: float,
-                         octaves: int, offset_x: float,
-                         offset_y: float) -> np.ndarray:
+
+def generate_noise_patch(
+    rng: random.Random, scale: float, octaves: int, offset_x: float, offset_y: float
+) -> np.ndarray:
     """
     Build an 8x8 RGB patch using layered Perlin noise, one layer per channel.
     Channel offsets are staggered so R/G/B carry different information.
@@ -169,11 +187,13 @@ def generate_noise_patch(rng: random.Random, scale: float,
                 nx = (offset_x + px) / scale
                 ny = (offset_y + py) / scale
                 v = noise_lib.pnoise2(
-                    nx + cs, ny + cs,
+                    nx + cs,
+                    ny + cs,
                     octaves=octaves,
                     persistence=0.5,
                     lacunarity=2.0,
-                    repeatx=1024, repeaty=1024,
+                    repeatx=1024,
+                    repeaty=1024,
                 )
                 patch[py, px, c] = v  # in roughly [-1, 1]
 
@@ -187,17 +207,27 @@ def generate_noise_patch(rng: random.Random, scale: float,
     return patch.astype(np.uint8)
 
 
-def run_noise(count: int, seed: int, scale: float,
-              octaves: int, out_dir: Path):
+def run_noise(count: int, seed: int, scale: float, octaves: int, out_dir: Path):
     rng = random.Random(seed)
-    existing = max((int(p.stem.split("_")[0]) for p in out_dir.glob("*.png")
-                    if p.stem.split("_")[0].isdigit()), default=-1) + 1
+    existing = (
+        max(
+            (
+                int(p.stem.split("_")[0])
+                for p in out_dir.glob("*.png")
+                if p.stem.split("_")[0].isdigit()
+            ),
+            default=-1,
+        )
+        + 1
+    )
     print(f"[noise] generating {count} patches  scale={scale} octaves={octaves}")
     for i in range(count):
         ox = rng.uniform(0, 500)
         oy = rng.uniform(0, 500)
+        # fmt: off
         raw   = generate_noise_patch(rng, scale, octaves, ox, oy)
         patch = snap_to_palette(raw)
+        # fmt: on
         save_candidate(patch, out_dir / f"{existing + i:04d}.png")
     print(f"[noise] saved {count} candidates to {out_dir}")
 
@@ -206,12 +236,14 @@ def run_noise(count: int, seed: int, scale: float,
 # CLI
 # ---------------------------------------------------------------------------
 
+
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(
         description="Generate 8x8 sprite candidates for Lithic Artifacts.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=__doc__,
     )
+    # fmt: off
     p.add_argument("--mode", choices=["sample", "noise", "both"],
                    default="both",
                    help="Generation mode (default: both)")
@@ -224,15 +256,18 @@ def parse_args() -> argparse.Namespace:
                    help="[noise] Perlin zoom level — larger = broader features (default: 4.0)")
     p.add_argument("--octaves", type=int, default=4,
                    help="[noise] Perlin octave count (default: 4)")
+    # fmt: on
     return p.parse_args()
 
 
 def main():
     args = parse_args()
 
-    here     = Path(__file__).parent
-    art_dir  = here.parent / "art-direction"
-    out_dir  = here / "candidates" / "img"
+    # fmt: off
+    here    = Path(__file__).parent
+    art_dir = here.parent / "art-direction"
+    out_dir = here / "candidates" / "img"
+    # fmt: on
     out_dir.mkdir(parents=True, exist_ok=True)
 
     if args.mode in ("sample", "both"):

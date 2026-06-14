@@ -1,5 +1,9 @@
 # TODO
 
+## Bugs
+
+- Closing the "ARTIFACT FOUND" screen causes you to shoot, when it should just close.
+
 ## Artifacts
 - Fractal Blaster: piercing shots that trace a constantly-shifting Julia set outline
 - Ice Missiles: [TBD]
