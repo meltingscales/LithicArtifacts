@@ -4,6 +4,41 @@ Locked decisions with rationale. Update this when a decision changes.
 
 ---
 
+## Movement
+
+Modeled closely on **Metroid Fusion** (GBA). All mechanics below are implemented.
+
+**Spin jump vs. straight jump.**
+Jump while pressing a direction → spin jump: full air control, can change direction mid-flight.
+Jump while neutral → straight jump: locked vertical trajectory, no air steering until landing.
+The distinction is visible in the player glyph (`*`/`o` spinning vs. `|` rigid).
+
+**Aim lock (trigger lock).**
+Hold `X` / LB to freeze horizontal movement and enter 8-way aim mode.
+Direction keys control aim angle while locked; an orange reticle shows the aimed direction.
+Releasing aim lock restores movement. Can still jump while locked.
+Without lock, aim is always the facing direction (or diagonal-up with up + horizontal).
+
+**Ledge grab.**
+When the player's bottom tile collides with a wall edge mid-air and the top tile is in open space,
+the player grabs the ledge and enters a hanging state (`@`/`n`).
+Press up or jump to launch upward off the ledge; press down or away from the wall to drop.
+
+**Wall jump.**
+Touching a wall mid-air (actively or passively) enables a wall jump on the next jump press.
+The player kicks off in the opposite direction with reduced horizontal velocity.
+**Direction restriction:** each wall side has an independent 24-frame cooldown after use,
+preventing infinite same-side climbing. The two sides are independent (left wall and right wall
+have separate cooldown timers `wj_cd_l` / `wj_cd_r`).
+
+---
+
+## Combat
+
+TBD
+
+---
+
 ## Rendering
 
 **Pixel-rendered at native 240×160 (GBA resolution), scaled up.**
@@ -41,9 +76,16 @@ Rendered as `@` (head) over `W` (legs). Hard requirement — affects all collisi
 
 ## Input
 
-**Keyboard: arrows / hjkl / space. Gamepad: D-pad + A button.**
-Both supported from day one. No analog stick (D-pad only for now).
+Both keyboard and gamepad supported from day one. No analog stick — D-pad only.
 Rationale: GBA aesthetic implies D-pad primacy.
+
+| Action | Keyboard | Gamepad |
+|---|---|---|
+| Move | arrows / hjkl | D-pad |
+| Jump | space / up / K | A or B |
+| Shoot | Z | X |
+| Aim lock (hold) | X | LB |
+| Quit | Q | — |
 
 ---
 

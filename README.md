@@ -30,6 +30,15 @@ When you find a combination the game considers aberrant, it tells you. Then it t
 - **Short sessions** — a full run should take under 30 minutes
 - **Simple and cheap** — this is a small game, intentionally
 
+## Files
+
+```txt
+main.py: Main game logic
+artifacts.py: Rare artifacts declared here
+enemies.py: Enemies declared here
+worldgen.py: Worldgen, perlin noise etc, and dungeon/structures declared here
+```
+
 ## Scope
 
 | Thing | Scope |
