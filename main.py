@@ -208,6 +208,12 @@ DEBUG_ITEMS = [
 class Game:
     def __init__(self):
         pyxel.init(SCREEN_W, SCREEN_H, title="Lithic Artifacts", fps=60)
+        # Sprites — bank 0, (0,0): 16×8 flyer
+        pyxel.images[0].load(0, 0, "assets/img/flyer.png")
+        # Sound 0: flyer spawn buzz (short descending triangle)
+        pyxel.sounds[0].set("e3d3c3", "t", "543", "nnn", 10)
+        # Sound 1: flyer shoot (noise burst with fadeout)
+        pyxel.sounds[1].set("a4", "n", "7", "f", 5)
         self.world        = World(seed=42)
         self.player       = Player()
         self.bullets      = []
@@ -817,9 +823,16 @@ class Game:
 
         # Drain world spawn queue
         for sx, sy, etype in self.world.pending_spawns:
-            if   etype == "crawler":      self.enemies.append(Crawler(sx, sy))
-            elif etype == "flyer":        self.enemies.append(Flyer(sx, sy))
-            elif etype == "shooty_flier": self.enemies.append(ShootyFlier(sx, sy))
+            if etype == "crawler":
+                self.enemies.append(Crawler(sx, sy))
+            elif etype == "flyer":
+                self.enemies.append(Flyer(sx, sy))
+                if abs(sy - self.player.y) < 200:
+                    pyxel.play(0, 0)
+            elif etype == "shooty_flier":
+                self.enemies.append(ShootyFlier(sx, sy))
+                if abs(sy - self.player.y) < 200:
+                    pyxel.play(0, 0)
         self.world.pending_spawns.clear()
 
         # Update enemies

@@ -30,3 +30,12 @@
 | Navigate | Arrows / k / j |
 | Toggle artifact | Z / Enter |
 | Close | Esc |
+
+## Artifacts
+
+### Spiral Borer
+Phase through solid floors while crouching. Burrowing is a commitment — ends only when you emerge below the floor.
+
+| Action | Keyboard | Gamepad |
+|---|---|---|
+| Activate (while crouching) | C | Y |

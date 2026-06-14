@@ -155,6 +155,11 @@ class Crawler(Enemy):
 class Flyer(Enemy):
     """Drifts toward the player horizontally with a sinusoidal vertical bob."""
     glyph = "f"
+    # Sprite sheet coords in image bank 0: 16×8 at (0, 0)
+    _SPR_U = 0
+    _SPR_V = 0
+    _SPR_W = 16   # positive = face right, negate to face left
+    _SPR_H = 8
 
     def __init__(self, x, y):
         super().__init__(x, y, hp=3, damage=1)
@@ -175,6 +180,13 @@ class Flyer(Enemy):
             if any(world.solid(lc, r) for r in rows):
                 self.x  = float((lc + 1) * _TILE)
                 self.vx = -self.vx
+
+    def draw(self, cam):
+        sy = int(self.y - cam)
+        if -_TILE <= sy < _SCREEN_H:
+            # Flip horizontally when moving left; sprite is 16×8, centred over 8×8 hitbox
+            w = self._SPR_W if self.vx >= 0 else -self._SPR_W
+            pyxel.blt(int(self.x) - 4, sy, 0, self._SPR_U, self._SPR_V, w, self._SPR_H, 0)
 
     def update(self, world, player, enemy_bullets):
         self.t += 1
@@ -216,3 +228,4 @@ class ShootyFlier(Flyer):
                 enemy_bullets.append(EnemyBullet(
                     self.x + _TILE / 2, self.y + _TILE / 2, dx, dy
                 ))
+                pyxel.play(1, 1)

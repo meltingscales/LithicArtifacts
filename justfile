@@ -31,7 +31,7 @@ lint:
 #     just audio wavetable --pitch 440 --duration 0.5
 #     just audio noise --base-freq 55 --fm-ratio 3.5 --fm-index 6.0 --count 64
 
-# Generate audio candidates (32768 Hz mono WAV) → assets/candidates/audio/
+# Generate audio candidates (32768 Hz mono WAV) → assets/candidates/audio/. For more help, see contents of `justfile`.
 audio MODE="both" *ARGS="":
     uv run python assets/generate-audio-datamosh.py --mode {{MODE}} {{ARGS}}
 
@@ -46,6 +46,6 @@ audio MODE="both" *ARGS="":
 #     just sprites noise --scale 8.0 --octaves 6
 #     just sprites both --seed 7 --count 128
 
-# Generate 8×8 palette-exact sprite candidates → assets/candidates/img/
+# Generate 8×8 palette-exact sprite candidates → assets/candidates/img/. For more help, see contents of `justfile`.
 sprites MODE="both" *ARGS="":
     uv run python assets/generate-8x8-datamosh.py --mode {{MODE}} {{ARGS}}
