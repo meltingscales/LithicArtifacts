@@ -2,6 +2,8 @@ import math
 import pyxel
 import random
 
+from artifacts import SpiralBorer
+
 SCREEN_W = 240
 SCREEN_H = 160
 TILE     = 8
@@ -115,6 +117,8 @@ class Player:
         self.wj_cd_l      = 0
         self.wj_cd_r      = 0
         self.ledge_cd     = 0
+        self.burrowing    = False
+        self.artifacts    = []
 
     @property
     def right(self):  return self.x + P_W
@@ -131,6 +135,7 @@ class Game:
         pyxel.init(SCREEN_W, SCREEN_H, title="Lithic Artifacts", fps=60)
         self.world   = World(seed=42)
         self.player  = Player()
+        self.player.artifacts.append(SpiralBorer())
         self.bullets = []
         self.cam_y   = 0.0
         pyxel.run(self.update, self.draw)
@@ -175,7 +180,7 @@ class Game:
 
     def _try_ledge_grab(self, p, wall_col, blocking_row, wall_dir):
         """Grab when bottom tile hits wall but top tile is open."""
-        if p.on_ground or p.state == "hanging" or p.ledge_cd > 0:
+        if p.on_ground or p.state == "hanging" or p.ledge_cd > 0 or p.burrowing:
             return False
         top_row = int(p.y // TILE)
         if blocking_row == top_row + 1 and not self.world.solid(wall_col, top_row):
@@ -218,6 +223,8 @@ class Game:
     def _move_y(self, p):
         p.y += p.vy
         p.on_ground = False
+        if p.burrowing:
+            return
         lc = int((p.x + P_HIT_INS) // TILE)
         rc = int((p.right - 1 - P_HIT_INS) // TILE)
         if p.vy < 0:
@@ -265,6 +272,14 @@ class Game:
         if p.wj_cd_l  > 0: p.wj_cd_l  -= 1
         if p.wj_cd_r  > 0: p.wj_cd_r  -= 1
         if p.ledge_cd > 0: p.ledge_cd -= 1
+
+        inputs = {
+            "left":  self._left(),  "right": self._right(),
+            "up":    self._up(),    "down":  self._down(),
+            "jump":  jump,          "shoot": self._shoot(),
+        }
+        for a in p.artifacts:
+            a.on_frame(p, self.world, inputs)
 
         if p.state == "hanging":
             p.aim_locked = self._aim_lock()
@@ -314,7 +329,7 @@ class Game:
                 p.aim_dx = p.facing
                 p.aim_dy = -1 if (self._up() and adx != 0) else 0
 
-            if jump:
+            if jump and not p.burrowing:
                 if p.on_ground:
                     p.vy        = JUMP_VEL
                     p.on_ground = False
@@ -336,7 +351,7 @@ class Game:
             p.vy = min(p.vy + GRAVITY, MAX_FALL)
             self._move_x(p)
             self._move_y(p)
-            if p.wall_contact == 0:
+            if p.wall_contact == 0 and not p.burrowing:
                 self._probe_walls(p)
 
         # Shoot
@@ -381,6 +396,9 @@ class Game:
         if p.state == "hanging":
             pyxel.text(px + 2, py + 1,        "@", YELLOW)
             pyxel.text(px + 2, py + TILE + 1, "n", YELLOW)
+        elif p.burrowing:
+            pyxel.text(px + 2, py + 1,        "@", YELLOW)
+            pyxel.text(px + 2, py + TILE + 1, "v", YELLOW)
         elif not p.on_ground and p.jump_type == "straight":
             pyxel.text(px + 2, py + 1,        "@", YELLOW)
             pyxel.text(px + 2, py + TILE + 1, "|", YELLOW)
