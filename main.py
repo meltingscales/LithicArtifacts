@@ -2,7 +2,7 @@ import math
 import pyxel
 import random
 
-from artifacts import SpiralBorer
+from artifacts import SpiralBorer, Wallbreaker
 from enemies   import Crawler, Flyer, ShootyFlier, EnemyBullet
 from worldgen  import gen_section, SECTION_H
 
@@ -43,7 +43,7 @@ P_H       = TILE * 2
 P_HIT_INS = 1       # horizontal inset for floor/ceiling checks; lets player slip into 1-tile gaps
 
 PREAMBLE_ROWS  = 15                # hardcoded entrance rows; sections begin here
-_ARTIFACT_POOL = [SpiralBorer]     # artifact classes that can appear as world pickups
+_ARTIFACT_POOL = [SpiralBorer, Wallbreaker]     # artifact classes that can appear as world pickups
 
 
 class World:
@@ -117,12 +117,13 @@ class Bullet:
 
     def __init__(self, x, y, dx, dy):
         mag = math.sqrt(dx * dx + dy * dy)
-        self.x     = float(x)
-        self.y     = float(y)
-        self.vx    = dx / mag * BULLET_SPEED
-        self.vy    = dy / mag * BULLET_SPEED
-        self.life  = self.LIFETIME
-        self.alive = True
+        self.x              = float(x)
+        self.y              = float(y)
+        self.vx             = dx / mag * BULLET_SPEED
+        self.vy             = dy / mag * BULLET_SPEED
+        self.life           = self.LIFETIME
+        self.alive          = True
+        self.can_break_walls = False   # set True by Wallbreaker artifact
 
     def update(self, world):
         self.x += self.vx
@@ -132,7 +133,8 @@ class Bullet:
             self.alive = False
             return
         if world.solid(int(self.x // TILE), int(self.y // TILE)):
-            world.destroy(int(self.x // TILE), int(self.y // TILE))
+            if self.can_break_walls:
+                world.destroy(int(self.x // TILE), int(self.y // TILE))
             self.alive = False
 
     def draw(self, cam):
@@ -202,6 +204,7 @@ class Player:
 
 DEBUG_ITEMS = [
     ("Spiral Borer", SpiralBorer),
+    ("Wallbreaker",  Wallbreaker),
 ]
 
 
@@ -594,6 +597,15 @@ class Game:
                     p.vx = 0.0
                     p.wall_contact = 1
                     break
+        # Hard clamp to world horizontal bounds
+        if p.x < 0:
+            p.x = 0.0
+            p.vx = 0.0
+            p.wall_contact = -1
+        elif p.right > SCREEN_W:
+            p.x = float(SCREEN_W - P_W)
+            p.vx = 0.0
+            p.wall_contact = 1
 
     def _move_y(self, p):
         p.y += p.vy
@@ -802,7 +814,10 @@ class Game:
             dx, dy = p.aim_dx, p.aim_dy
             if dx == 0 and dy == 0:
                 dx = p.facing
-            self.bullets.append(Bullet(p.gun_x, p.gun_y, dx, dy))
+            b = Bullet(p.gun_x, p.gun_y, dx, dy)
+            for a in p.artifacts:
+                a.on_shoot(p, b)
+            self.bullets.append(b)
             p.shoot_cd = SHOOT_COOLDOWN
 
         for b in self.bullets:

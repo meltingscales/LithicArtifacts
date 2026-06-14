@@ -28,6 +28,16 @@ class Artifact:
         pass
 
 
+class Wallbreaker(Artifact):
+    """Shots destroy solid tiles on impact."""
+    name        = "Wallbreaker"
+    glyph       = "W"
+    description = "Your shots punch through solid walls, destroying tiles on impact."
+
+    def on_shoot(self, player, bullet):
+        bullet.can_break_walls = True
+
+
 class SpiralBorer(Artifact):
     """Phase downward through solid floors without destroying them.
     Entering is a commitment — burrowing ends only when you emerge below."""

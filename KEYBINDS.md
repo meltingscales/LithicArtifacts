@@ -39,3 +39,6 @@ Phase through solid floors while crouching. Burrowing is a commitment — ends o
 | Action | Keyboard | Gamepad |
 |---|---|---|
 | Activate (while crouching) | C | Y |
+
+### Wallbreaker
+Passive. Your shots destroy solid tiles on impact. Without this artifact, bullets stop at walls but don't break them.
