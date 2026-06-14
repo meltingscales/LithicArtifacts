@@ -862,11 +862,16 @@ class Game:
                     p.vx = adx * MOVE_SPEED
                 if adx != 0:
                     p.facing = adx
-                # Aim: facing direction; diagonal-up only with up + horizontal
+                # Aim: facing + vertical modifier
                 p.aim_dx = p.facing
-                p.aim_dy = -1 if (self._up() and adx != 0) else 0
-                # Toggle crouch on: Down press while on ground, not burrowing
-                if p.on_ground and down_p and not p.burrowing:
+                if self._up() and adx != 0:
+                    p.aim_dy = -1   # diagonal up while running
+                elif self._down() and (adx != 0 or not p.on_ground):
+                    p.aim_dy = 1    # diagonal/straight down while running or airborne
+                else:
+                    p.aim_dy = 0
+                # Toggle crouch on: Down press while stationary on ground, not burrowing
+                if p.on_ground and down_p and adx == 0 and not p.burrowing:
                     p.y += TILE
                     p.crouching = True
                     p.vx = 0.0

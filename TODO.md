@@ -11,9 +11,11 @@
 ## Worldgen
 - Organic cave variety (more section types: shafts, puzzle chambers)
   - worldgen should be minecraft-esque in that we use perlin noise to generate cave-like structures.
+
 - Floor/biome transitions after every N sections
   - transitioning biomes/floors shows a small center-screen modal like in Castlevania when areas change (no pause).
   - it doesn't expire, so re-visited areas will keep the same transition effect.
+
 - Difficulty scaling: denser spawns + harder enemies deeper down
 
 ## Other
