@@ -19,3 +19,5 @@ the same treatment.
 
 - Do we need to split up any large modules?
 - /caveman (can be run to save tokens)
+  - `curl -fsSL https://raw.githubusercontent.com/JuliusBrussee/caveman/main/install.sh | bash`
+  - <https://github.com/JuliusBrussee/caveman-code>
