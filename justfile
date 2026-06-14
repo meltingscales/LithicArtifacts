@@ -11,10 +11,10 @@ install:
     uv sync
 
 fmt:
-    uv run ruff format .
+    uvx ruff format .
 
 lint:
-    uv run ruff check .
+    uvx ruff check .
 
 # Extended help for `audio`:
 #   MODE (positional): wavetable | noise | both  (default: both)

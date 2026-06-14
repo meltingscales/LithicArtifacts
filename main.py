@@ -19,6 +19,7 @@ DARK_GRAY  = 5
 LIGHT_GRAY = 6
 YELLOW     = 10
 ORANGE     = 9
+BROWN      = 4
 
 # Pause / body-panel layout
 _CELL  = 13    # body-grid cell pitch (12 px visible + 1 px gap)
@@ -116,7 +117,7 @@ class World:
             self._gen_up_to(needed)
 
     def solid(self, col, row):
-        return self.tiles.get((int(col), int(row)), 0) == 1
+        return self.tiles.get((int(col), int(row)), 0) != 0
 
     def destroy(self, col, row):
         self.tiles.pop((int(col), int(row)), None)
@@ -864,10 +865,12 @@ class Game:
                     p.facing = adx
                 # Aim: facing + vertical modifier
                 p.aim_dx = p.facing
+                # fmt: off
                 if self._up() and adx != 0:
                     p.aim_dy = -1   # diagonal up while running
                 elif self._down() and (adx != 0 or not p.on_ground):
                     p.aim_dy = 1    # diagonal/straight down while running or airborne
+                # fmt: on
                 else:
                     p.aim_dy = 0
                 # Toggle crouch on: Down press while stationary on ground, not burrowing
@@ -1021,11 +1024,16 @@ class Game:
 
         for row in range(first, last):
             for col in range(COLS):
-                if self.world.solid(col, row):
+                ttype = self.world.tiles.get((col, row), 0)
+                if ttype != 0:
                     sx = col * TILE
                     sy = int(row * TILE - cam)
-                    pyxel.rect(sx, sy, TILE, TILE, DARK_GRAY)
-                    pyxel.rectb(sx, sy, TILE, TILE, LIGHT_GRAY)
+                    if ttype == 2:  # cave rock
+                        pyxel.rect(sx, sy, TILE, TILE, BROWN)
+                        pyxel.rectb(sx, sy, TILE, TILE, DARK_GRAY)
+                    else:  # platform / side wall (type 1)
+                        pyxel.rect(sx, sy, TILE, TILE, DARK_GRAY)
+                        pyxel.rectb(sx, sy, TILE, TILE, LIGHT_GRAY)
 
         for b in self.bullets:
             b.draw(cam)

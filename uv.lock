@@ -16,12 +16,12 @@ name = "lithicartifacts"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
+    { name = "noise" },
     { name = "pyxel" },
 ]
 
 [package.dev-dependencies]
 dev = [
-    { name = "noise" },
     { name = "numpy" },
     { name = "pillow" },
     { name = "pyinstaller" },
@@ -29,11 +29,13 @@ dev = [
 ]
 
 [package.metadata]
-requires-dist = [{ name = "pyxel", specifier = ">=2.9.6" }]
+requires-dist = [
+    { name = "noise", specifier = ">=1.2.2" },
+    { name = "pyxel", specifier = ">=2.9.6" },
+]
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "noise", specifier = ">=1.2.2" },
     { name = "numpy", specifier = ">=1.26" },
     { name = "pillow", specifier = ">=10.0" },
     { name = "pyinstaller", specifier = ">=6.0" },
