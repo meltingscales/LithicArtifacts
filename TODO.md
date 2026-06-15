@@ -2,7 +2,7 @@
 
 ## Bugs
 
-<!--None yet.-->
+None yet.
 
 ## Artifacts
 - Fractal Blaster: piercing shots that trace a constantly-shifting Julia set outline
@@ -15,6 +15,8 @@
 
 - Enemies sometimes (1/5 chance) drop missile refill canisters (5 missiles for any type of missile that is the least full)
   - canisters blink within 10 seconds (for 3 seconds), then despawn
+
+- When you pick up an artifact, suggest the player dismiss (already does this) or pause to install their artifact, and allow them to pause.
 
 ## Worldgen
 - Difficulty scaling: denser spawns + harder enemies deeper down, but better artifacts.
