@@ -1332,12 +1332,12 @@ class Game:
                 )
                 prev_x = p.x
                 self._move_x(p)
-                if _msl and not _msl._has_wall_grip(p, self.world):
+                if _msl and not _msl._has_wall_grip(p):
                     p.x = prev_x
                     p.vx = 0.0
                 prev_y = p.y
                 self._move_y(p)
-                if _msl and not _msl._has_wall_grip(p, self.world):
+                if _msl and not _msl._has_wall_grip(p):
                     p.y = prev_y
                     p.vy = 0.0
                 self._probe_walls(p)

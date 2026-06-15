@@ -179,12 +179,13 @@ class MechaspiderLegs(Artifact):
 
     def __init__(self):
         # fmt: off
-        self._feet       = [(0.0, 0.0)] * self._N_LEGS
-        self._step_timer = [0]          * self._N_LEGS
-        self._step_from  = [(0.0, 0.0)] * self._N_LEGS
-        self._step_to    = [(0.0, 0.0)] * self._N_LEGS
-        self._tick       = 0
-        self._wall_side  = 1   # 1=right, -1=left; set on grip
+        self._feet          = [(0.0, 0.0)] * self._N_LEGS
+        self._step_timer    = [0]          * self._N_LEGS
+        self._step_from     = [(0.0, 0.0)] * self._N_LEGS
+        self._step_to       = [(0.0, 0.0)] * self._N_LEGS
+        self._tick          = 0
+        self._wall_side     = 1    # 1=right, -1=left; set on grip
+        self._grip_edge_x   = 0.0  # player edge x at grip start (world coords)
         # fmt: on
 
     # ---- helpers ----
@@ -231,36 +232,23 @@ class MechaspiderLegs(Artifact):
                         best = (fx, fy)
         return best
 
-    def _has_wall_grip(self, player, world):
-        """True if any solid tile exists within leg reach on the wall side.
+    def _has_wall_grip(self, player):
+        """True if player edge is still within leg reach of the gripped wall.
 
-        Searches only columns in the wall direction — prevents ceiling/floor tiles
-        from counting as a grip when the player has drifted far from the wall.
+        Checks direct pixel distance from the grip edge — immune to ceiling/floor
+        tiles in nearby columns triggering a false positive.
         """
         ws = self._wall_side
-        if ws == 1:
-            base_col = int(player.right // _TILE)
-        else:
-            base_col = int(player.x // _TILE) - 1
-        prow = int((player.y + _P_H * 0.5) // _TILE)
-        R = self._LEG_REACH + 1
-        for dc in range(R):
-            c = base_col + dc * ws
-            for dr in range(-R, R + 1):
-                if world.solid(c, prow + dr):
-                    return True
-        return False
+        edge = player.right if ws == 1 else player.x
+        return abs(edge - self._grip_edge_x) <= self._LEG_REACH * _TILE
 
     def _init_feet(self, player, world):
         self._wall_side = player.wall_contact
+        self._grip_edge_x = player.right if player.wall_contact == 1 else player.x
         for i in range(self._N_LEGS):
-            py = self._preferred_y(player, i)
-            anchor = self._find_anchor(player, world, py)
-            if anchor:
-                self._feet[i] = anchor
-            else:
-                bx = float(player.x + _TILE) if self._wall_side == 1 else float(player.x)
-                self._feet[i] = (bx, py)
+            pref_x, pref_y = self._preferred_foot(player, i)
+            anchor = self._find_anchor(player, world, pref_y)
+            self._feet[i] = anchor if anchor else (pref_x, pref_y)
 
     # ---- on_frame ----
 
@@ -304,10 +292,10 @@ class MechaspiderLegs(Artifact):
             foot_dist = math.sqrt((fx - pref_x) ** 2 + (fy - pref_y) ** 2)
             if foot_dist >= self._STEP_DIST:
                 anchor = self._find_anchor(player, world, pref_y)
-                if anchor:
-                    self._step_from[i] = (fx, fy)
-                    self._step_to[i] = anchor
-                    self._step_timer[i] = self._STEP_FRAMES
+                target = anchor if anchor else (pref_x, pref_y)  # hang in air if no tile
+                self._step_from[i] = (fx, fy)
+                self._step_to[i] = target
+                self._step_timer[i] = self._STEP_FRAMES
 
     # ---- draw ----
 
@@ -316,18 +304,22 @@ class MechaspiderLegs(Artifact):
             return
         # fmt: off
         _LEG_COLS = (5, 13, 5, 13, 5, 13, 5, 13)
+        _SOCKET_R = 3   # radius of shoulder socket circle (px)
+        # 8 evenly-spaced angles for shoulder attachment points
+        _ANGLES = [math.tau * i / self._N_LEGS for i in range(self._N_LEGS)]
         # fmt: on
-        body_sx = player.x + _TILE * 0.5          # body center x (screen = world, no h-cam)
-        body_sy = player.y + _P_H * 0.5 - cam     # body center y (screen space)
+        body_sx = player.x + _TILE * 0.5       # body center x
+        body_sy = player.y + _P_H * 0.5 - cam  # body center y (screen)
 
         for i in range(self._N_LEGS):
-            sy_world = self._preferred_y(player, i)
-            shoulder_sx = int(player.x + _TILE - 1) if self._wall_side == 1 else int(player.x + 1)
-            shoulder_sy = int(sy_world - cam)
+            # Shoulder on 8-point circle around body center
+            angle = _ANGLES[i]
+            shoulder_sx = body_sx + math.cos(angle) * _SOCKET_R
+            shoulder_sy = body_sy + math.sin(angle) * _SOCKET_R
 
             fx, fy = self._feet[i]
-            foot_sx = int(fx)
-            foot_sy = int(fy - cam)
+            foot_sx = float(fx)
+            foot_sy = float(fy - cam)
 
             # Elbow: midpoint + outward bulge away from body center
             mid_sx = (shoulder_sx + foot_sx) * 0.5
@@ -335,13 +327,13 @@ class MechaspiderLegs(Artifact):
             out_x = mid_sx - body_sx
             out_y = mid_sy - body_sy
             out_len = math.sqrt(out_x ** 2 + out_y ** 2) or 1.0
-            knee_sx = int(mid_sx + out_x / out_len * self._ELBOW_OUT)
-            knee_sy = int(mid_sy + out_y / out_len * self._ELBOW_OUT)
+            knee_sx = mid_sx + out_x / out_len * self._ELBOW_OUT
+            knee_sy = mid_sy + out_y / out_len * self._ELBOW_OUT
 
             col = _LEG_COLS[i]
-            pyxel.line(shoulder_sx, shoulder_sy, knee_sx, knee_sy, col)
-            pyxel.line(knee_sx, knee_sy, foot_sx, foot_sy, col)
-            pyxel.pset(foot_sx, foot_sy, 6)
+            pyxel.line(int(shoulder_sx), int(shoulder_sy), int(knee_sx), int(knee_sy), col)
+            pyxel.line(int(knee_sx), int(knee_sy), int(foot_sx), int(foot_sy), col)
+            pyxel.pset(int(foot_sx), int(foot_sy), 6)
 
 
 class FractalBlaster(Artifact):
