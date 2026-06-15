@@ -6,7 +6,6 @@
 
 - Player can't go through 2-block-high gaps in walls. Maybe lower their pushbox height very slightly? Or suggest another fix.
 
-- It's possible for the player to get stuck if they go into a cave that's deep but has no exit. How can we update our worldgen search-tree algorithm to account for this and reject caves that would soft-lock the player?
 
 ## Gameplay
 - Floors / progression (floor counter, difficulty scaling)

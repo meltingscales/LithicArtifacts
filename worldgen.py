@@ -200,11 +200,13 @@ def _gen_cave(rng, tiles, abs_start, free_l, free_r):
 
 def _is_traversable(tiles, abs_start, free_l, free_r):
     """
-    BFS reachability check.  Returns True if a 1×2 player can get from
-    the top entry corridor to within two rows of the section bottom.
+    Two-pass BFS traversability check.
 
-    State: (col, foot_row) where foot_row is the lower of the two body rows.
-    Player fits at state (c, f) when neither (c, f) nor (c, f-1) is solid.
+    Pass 1: full BFS from top corridor — collects all reachable states.
+    Pass 2: for every reachable grounded state verify it can reach the
+            section bottom; shared `safe` set avoids redundant work.
+
+    Rejects caves where side pockets are reachable but have no exit.
     """
     bot = abs_start + _SECTION_H
 
@@ -212,7 +214,6 @@ def _is_traversable(tiles, abs_start, free_l, free_r):
         return (c, r) in tiles
 
     def fits(c, f):
-        """1×2 player fits at foot_row=f (head row = f-1)."""
         return (
             1 <= c <= _COLS - 2
             and abs_start <= f < bot
@@ -221,12 +222,42 @@ def _is_traversable(tiles, abs_start, free_l, free_r):
         )
 
     def fall_to(c, f):
-        """Let the player fall from foot_row=f; return landed foot_row."""
         while f + 1 < bot and not solid(c, f + 1):
             f += 1
         return f
 
-    # Seed: drop from every entry-corridor column at the section top
+    def neighbors(col, foot):
+        grounded = solid(col, foot + 1) or foot + 1 >= bot
+        nxt = []
+        if not grounded:
+            nf = foot + 1
+            if fits(col, nf):
+                nxt.append((col, nf))
+        else:
+            for dc in (-1, 1):
+                nc = col + dc
+                if fits(nc, foot):
+                    lf = fall_to(nc, foot)
+                    if fits(nc, lf):
+                        nxt.append((nc, lf))
+            for dh in range(1, _JUMP_H + 1):
+                pf = foot - dh
+                if pf < abs_start:
+                    break
+                if any(solid(col, foot - k) for k in range(1, dh + 1)):
+                    break
+                if not fits(col, pf):
+                    break
+                for dc in range(-dh, dh + 1):
+                    nc = col + dc
+                    if not fits(nc, pf):
+                        continue
+                    lf = fall_to(nc, pf)
+                    if fits(nc, lf):
+                        nxt.append((nc, lf))
+        return nxt
+
+    # Pass 1: collect all reachable states from entry corridor
     visited = set()
     queue = deque()
     for c in range(free_l, free_r + 1):
@@ -238,49 +269,40 @@ def _is_traversable(tiles, abs_start, free_l, free_r):
 
     while queue:
         col, foot = queue.popleft()
-        if foot >= bot - 2:
-            return True
-
-        grounded = solid(col, foot + 1) or foot + 1 >= bot
-        nexts = []
-
-        if not grounded:
-            nf = foot + 1
-            if fits(col, nf):
-                nexts.append((col, nf))
-        else:
-            # Walk one step left or right, then fall to landing
-            for dc in (-1, 1):
-                nc = col + dc
-                if fits(nc, foot):
-                    lf = fall_to(nc, foot)
-                    if fits(nc, lf):
-                        nexts.append((nc, lf))
-
-            # Jump: rise up to _JUMP_H rows, then drift left/right and fall
-            for dh in range(1, _JUMP_H + 1):
-                pf = foot - dh  # foot row at jump apex
-                if pf < abs_start:
-                    break
-                # Abort if any upward cell is blocked (ceiling collision)
-                if any(solid(col, foot - k) for k in range(1, dh + 1)):
-                    break
-                if not fits(col, pf):
-                    break
-                for dc in range(-dh, dh + 1):
-                    nc = col + dc
-                    if not fits(nc, pf):
-                        continue
-                    lf = fall_to(nc, pf)
-                    if fits(nc, lf):
-                        nexts.append((nc, lf))
-
-        for st in nexts:
+        for st in neighbors(col, foot):
             if st not in visited:
                 visited.add(st)
                 queue.append(st)
 
-    return False
+    # Pass 2: verify every reachable grounded state can exit to the bottom
+    safe = {st for st in visited if st[1] >= bot - 2}
+    if not safe:
+        return False
+
+    for seed in list(visited):
+        col, foot = seed
+        if seed in safe:
+            continue
+        if not (solid(col, foot + 1) or foot + 1 >= bot):
+            continue  # airborne — skip (will fall to grounded state)
+        # micro-BFS from this grounded state to any known-safe state
+        local_q = deque([seed])
+        local_seen = {seed}
+        escaped = False
+        while local_q and not escaped:
+            c2, f2 = local_q.popleft()
+            for st in neighbors(c2, f2):
+                if st in safe:
+                    escaped = True
+                    break
+                if st in visited and st not in local_seen:
+                    local_seen.add(st)
+                    local_q.append(st)
+        if not escaped:
+            return False
+        safe.update(local_seen)
+
+    return True
 
 
 def _gen_spawns(rng, tiles, abs_start, stype):
