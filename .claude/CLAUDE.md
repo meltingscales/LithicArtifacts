@@ -2,7 +2,7 @@ See README.md and DESIGN-DECISIONS.md
 
 See ART-DIRECTION.md
 
-See TODO.md. Finished items go in TODO-DONE.md
+See TODO.md. When a task is finished: remove it from TODO.md AND add a one-line summary to the top of TODO-DONE.md. Do both steps before committing.
 
 See KEYBINDS.md
 

@@ -1,5 +1,10 @@
 # Done
 
+- Missile refill canisters: 1/5 drop chance on enemy kill; refills 5 ammo to least-full equipped missile; 10s lifetime, blinks last 3s (6f on/off cyan/white), despawns on pickup or timeout
+- Bug: frozen enemies now keep original sprite/glyph tinted blue (dither(0.5) navy overlay for Flyer sprite; cyan glyph color for text enemies); previously replaced with nav rect
+- Bug: debug menu crash on immortality toggle — `isinstance(a, None)` called before `cls is None` guard; fixed by checking `cls is None` first
+- Vampiric Cape trail fade: trail drains when player stops — 20f grace period then oldest ghost dropped every 12f; full trail clears ~2s after halting
+- Frozen enemies (Ice Missiles): harmless platforms — skipped in contact damage check; floor collision added to `_move_y` (player lands on frozen enemy tops)
 - Bug: Flyer/ShootyFlier phased through walls — destination-only check allowed sine to jump over walls when self.y was blocked for multiple frames; fixed by sweeping all tile rows between current and desired y
 - Ice Missiles artifact: hold RB+Z to fire; 2 dmg + 5s freeze on hit; ammo=10/30; `~:XX` HUD right of HP bar (yellow in missile mode); SELECT cycles missile types; MissileArtifact base class for future types
 - Biome transitions: 5 biomes (Dungeon→Caverns→Abyss→Depths→Inferno, cycles) every 6 sections; distinctive bg + tile colors per biome; "ENTERING [NAME]" modal on transition, 4s timer, re-triggers on backtrack
