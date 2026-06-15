@@ -201,10 +201,14 @@ class Flyer(Enemy):
         if -_TILE <= sy < _SCREEN_H:
             # Flip horizontally when moving left; sprite is 16×8, centred over 8×8 hitbox
             w = self._SPR_W if self.vx >= 0 else -self._SPR_W
-            pyxel.blt(int(self.x) - 4, sy, 0, self._SPR_U, self._SPR_V, w, self._SPR_H, 0)
+            pyxel.blt(
+                int(self.x) - 4, sy, 0, self._SPR_U, self._SPR_V, w, self._SPR_H, 0
+            )
             if self.frozen_timer > 0:
                 pyxel.dither(0.5)
-                pyxel.rect(int(self.x) - 4, sy, 16, self._SPR_H, 1)  # navy dither overlay
+                pyxel.rect(
+                    int(self.x) - 4, sy, 16, self._SPR_H, 1
+                )  # navy dither overlay
                 pyxel.dither(1.0)
 
     def update(self, world, player, enemy_bullets):

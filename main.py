@@ -3,7 +3,7 @@ import pyxel
 import random
 
 # fmt: off
-from artifacts import IceMissile, MissileArtifact, SpiralBorer, VampiricCape, Wallbreaker
+from artifacts import FractalBlaster, IceMissile, MissileArtifact, SpiralBorer, VampiricCape, Wallbreaker
 from enemies   import Crawler, Flyer, ShootyFlier, EnemyBullet
 from worldgen  import gen_section, SECTION_H
 # fmt: on
@@ -43,33 +43,41 @@ def biome_for_row(abs_row):
 
 
 # Pause / body-panel layout
-_CELL  = 13    # body-grid cell pitch (12 px visible + 1 px gap)
-_GX    = 8     # body grid left edge
-_GY    = 18    # body grid top edge
-_IX    = 82    # inventory list left edge
-_IY    = 18    # inventory list top edge
-_IRH   = 10    # inventory row height
-_TIPY  = 131   # tooltip divider y
-_HOVER = 180   # frames of hover before description appears (3 s @ 60 fps)
+_CELL = 13  # body-grid cell pitch (12 px visible + 1 px gap)
+_GX = 8  # body grid left edge
+_GY = 18  # body grid top edge
+_IX = 82  # inventory list left edge
+_IY = 18  # inventory list top edge
+_IRH = 10  # inventory row height
+_TIPY = 131  # tooltip divider y
+_HOVER = 180  # frames of hover before description appears (3 s @ 60 fps)
 
-GRAVITY       = 0.25
-MAX_FALL      = 4.0
-MOVE_SPEED    = 1.5
-JUMP_VEL      = -4.5
+GRAVITY = 0.25
+MAX_FALL = 4.0
+MOVE_SPEED = 1.5
+JUMP_VEL = -4.5
 WALL_JUMP_VEL = -4.0
 WALL_JUMP_HVX = 2.0
-WALL_JUMP_CD  = 24    # frames before same-side wall jump allowed again
+WALL_JUMP_CD = 24  # frames before same-side wall jump allowed again
 
-BULLET_SPEED   = 5.0
+BULLET_SPEED = 5.0
 SHOOT_COOLDOWN = 12
-DEATH_HOLD     = 90   # frames of death screen before respawn prompt appears
+DEATH_HOLD = 90  # frames of death screen before respawn prompt appears
 
-P_W       = TILE
-P_H       = TILE * 2
-P_HIT_INS = 1       # horizontal inset for floor/ceiling checks; lets player slip into 1-tile gaps
+P_W = TILE
+P_H = TILE * 2
+P_HIT_INS = (
+    1  # horizontal inset for floor/ceiling checks; lets player slip into 1-tile gaps
+)
 
-PREAMBLE_ROWS  = 15                                              # hardcoded entrance rows; sections begin here
-_ARTIFACT_POOL = [SpiralBorer, VampiricCape, Wallbreaker, IceMissile]  # artifact classes that can appear as world pickups
+PREAMBLE_ROWS = 15  # hardcoded entrance rows; sections begin here
+_ARTIFACT_POOL = [
+    SpiralBorer,
+    VampiricCape,
+    Wallbreaker,
+    IceMissile,
+    FractalBlaster,
+]  # artifact classes that can appear as world pickups
 # fmt: on
 
 
@@ -179,10 +187,10 @@ class Bullet:
 
 
 class MissileBullet:
-    LIFETIME      = 120
-    SPEED         = 3.0
-    DAMAGE        = 2
-    FREEZE_FRAMES = 300   # 5 s at 60 fps
+    LIFETIME = 120
+    SPEED = 3.0
+    DAMAGE = 2
+    FREEZE_FRAMES = 300  # 5 s at 60 fps
 
     def __init__(self, x, y, dx, dy):
         mag = math.sqrt(dx * dx + dy * dy) or 1.0
@@ -213,8 +221,88 @@ class MissileBullet:
         sy = int(self.y - cam)
         if 0 <= sy < SCREEN_H:
             x = int(self.x)
-            pyxel.rect(x, sy, 3, 3, 12)       # cyan body
-            pyxel.pset(x + 1, sy + 1, 7)      # white center pixel
+            pyxel.rect(x, sy, 3, 3, 12)  # cyan body
+            pyxel.pset(x + 1, sy + 1, 7)  # white center pixel
+
+
+class FractalBullet:
+    """Piercing bullet that traces the Julia set boundary; pierces terrain and enemies."""
+
+    # fmt: off
+    LIFETIME = 150
+    SPEED    = 4.0
+    DAMAGE   = 1
+    # fmt: on
+
+    def __init__(self, x, y, dx, dy, julia_cache, cam):
+        mag = math.sqrt(dx * dx + dy * dy) or 1.0
+        nx, ny = dx / mag, dy / mag
+        # fmt: off
+        self.x               = float(x)
+        self.y               = float(y)
+        self._nx             = nx
+        self._ny             = ny
+        self.life            = self.LIFETIME
+        self.alive           = True
+        self.piercing        = True
+        self.hit_enemies: set = set()
+        # fmt: on
+        self._waypoints = self._build_waypoints(x, y, nx, ny, julia_cache, cam)
+        self._wp_idx    = 0  # fmt: skip
+
+    @staticmethod
+    def _build_waypoints(gx, gy, nx, ny, cache, cam):
+        if cache is None:
+            return []
+        H, W = cache.shape
+        MAX_ITER = int(cache.max())
+        boundary = []
+        for ry in range(H):
+            for rx in range(W):
+                in_set = int(cache[ry, rx]) == MAX_ITER
+                for dr, dc in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+                    nr, nc = ry + dr, rx + dc
+                    if 0 <= nr < H and 0 <= nc < W:
+                        if (int(cache[nr, nc]) == MAX_ITER) != in_set:
+                            boundary.append((rx * 8 + 4, ry * 8 + 4))
+                            break
+                    else:
+                        break
+        # Convert screen → world, sort by projection along firing direction,
+        # keep only points ahead of the gun
+        pts = []
+        for sx, sy in boundary:
+            wy = sy + cam
+            proj = (sx - gx) * nx + (wy - gy) * ny
+            if proj > 0:
+                pts.append((proj, sx, wy))
+        pts.sort()
+        return [(sx, wy) for _, sx, wy in pts]
+
+    def update(self, world):
+        if self._wp_idx < len(self._waypoints):
+            wx, wy = self._waypoints[self._wp_idx]
+            ddx, ddy = wx - self.x, wy - self.y
+            dist = math.sqrt(ddx * ddx + ddy * ddy)
+            if dist <= self.SPEED:
+                self.x, self.y = wx, wy
+                self._wp_idx += 1
+            else:
+                self.x += ddx / dist * self.SPEED
+                self.y += ddy / dist * self.SPEED
+        else:
+            self.x += self._nx * self.SPEED
+            self.y += self._ny * self.SPEED
+        self.life -= 1
+        if self.life <= 0:
+            self.alive = False
+        # Pierces terrain — no world.solid() check
+
+    def draw(self, cam):
+        sy = int(self.y - cam)
+        if 0 <= sy < SCREEN_H:
+            col = 12 if (pyxel.frame_count // 3) % 2 else 13  # cyan / indigo pulse
+            pyxel.rect(int(self.x), sy, 3, 3, col)
 
 
 class WorldPickup:
@@ -327,11 +415,12 @@ class Player:
 
 # fmt: off
 DEBUG_ITEMS = [
-    ("Spiral Borer",  SpiralBorer),
-    ("Wallbreaker",   Wallbreaker),
-    ("Vampiric Cape", VampiricCape),
-    ("Ice Missiles",  IceMissile),
-    ("Immortality?",  None),        # None = boolean flag on Game, not an artifact
+    ("Spiral Borer",     SpiralBorer),
+    ("Wallbreaker",      Wallbreaker),
+    ("Vampiric Cape",    VampiricCape),
+    ("Ice Missiles",     IceMissile),
+    ("Fractal Blaster",  FractalBlaster),
+    ("Immortality?",     None),        # None = boolean flag on Game, not an artifact
 ]
 # fmt: on
 
@@ -482,7 +571,9 @@ class Game:
         for i, ln in enumerate(self._wrap(cls.description, 46)[:3]):
             pyxel.text(px0 + 4, py0 + 34 + i * 10, ln, LIGHT_GRAY)
         pyxel.text(px0 + 4, py0 + ph - 19, "Z / X  dismiss", DARK_GRAY)
-        pyxel.text(px0 + 4, py0 + ph - 10, "Tab / Start  open body to install", DARK_GRAY)
+        pyxel.text(
+            px0 + 4, py0 + ph - 10, "Tab / Start  open body to install", DARK_GRAY
+        )
 
     # -- pick / place helpers --
 
@@ -1137,7 +1228,16 @@ class Game:
                     art.ammo -= 1
                     p.shoot_cd = SHOOT_COOLDOWN
             else:
-                b = Bullet(p.gun_x, p.gun_y, dx, dy)
+                fractal = next(
+                    (a for a in p.artifacts if isinstance(a, FractalBlaster)), None
+                )
+                if fractal is not None:
+                    b = FractalBullet(
+                        p.gun_x, p.gun_y, dx, dy, fractal._cache, self.cam_y
+                    )
+                    fractal.bg_timer = FractalBlaster.BG_LIFETIME
+                else:
+                    b = Bullet(p.gun_x, p.gun_y, dx, dy)
                 for a in p.artifacts:
                     a.on_shoot(p, b)
                 self.bullets.append(b)
@@ -1153,17 +1253,25 @@ class Game:
         for b in self.bullets:
             if not b.alive:
                 continue
+            piercing = getattr(b, "piercing", False)
+            hit_enemies = getattr(b, "hit_enemies", None)
             for e in self.enemies:
-                if e.alive and (
-                    b.x < e.right and b.x + 2 > e.x and b.y < e.bottom and b.y + 2 > e.y
-                ):
-                    e.take_damage(1)
+                if not e.alive:
+                    continue
+                if hit_enemies is not None and id(e) in hit_enemies:
+                    continue
+                if b.x < e.right and b.x + 2 > e.x and b.y < e.bottom and b.y + 2 > e.y:
+                    e.take_damage(FractalBullet.DAMAGE if piercing else 1)
                     if not e.alive:
                         for a in p.artifacts:
                             a.on_kill(p)
                         self._maybe_drop_canister(e)
-                    b.alive = False
-                    break
+                    if piercing:
+                        if hit_enemies is not None:
+                            hit_enemies.add(id(e))
+                    else:
+                        b.alive = False
+                        break
 
         # Missile bullets vs enemies — freeze on hit
         for mb in self.missile_bullets:
@@ -1171,7 +1279,10 @@ class Game:
                 continue
             for e in self.enemies:
                 if e.alive and (
-                    mb.x < e.right and mb.x + 3 > e.x and mb.y < e.bottom and mb.y + 3 > e.y
+                    mb.x < e.right
+                    and mb.x + 3 > e.x
+                    and mb.y < e.bottom
+                    and mb.y + 3 > e.y
                 ):
                     e.take_damage(MissileBullet.DAMAGE)
                     e.frozen_timer = MissileBullet.FREEZE_FRAMES
@@ -1214,11 +1325,15 @@ class Game:
         # Damage player (enemy contact, then enemy bullets; one source per inv window)
         if p.inv_cd == 0 and not self.immortal:
             for e in self.enemies:
-                if e.alive and e.frozen_timer == 0 and (
-                    p.x < e.right
-                    and p.right > e.x
-                    and p.y < e.bottom
-                    and p.bottom > e.y
+                if (
+                    e.alive
+                    and e.frozen_timer == 0
+                    and (
+                        p.x < e.right
+                        and p.right > e.x
+                        and p.y < e.bottom
+                        and p.bottom > e.y
+                    )
                 ):
                     p.hp = max(0, p.hp - e.damage)
                     p.inv_cd = 60
@@ -1262,7 +1377,9 @@ class Game:
                 missiles = [a for a in p.artifacts if isinstance(a, MissileArtifact)]
                 if missiles:
                     target = min(missiles, key=lambda a: a.ammo / a.max_ammo)
-                    target.ammo = min(target.ammo + MissileCanister.AMMO_AMOUNT, target.max_ammo)
+                    target.ammo = min(
+                        target.ammo + MissileCanister.AMMO_AMOUNT, target.max_ammo
+                    )
                 c.alive = False
                 break
 
@@ -1291,10 +1408,10 @@ class Game:
         if biome_idx != self.current_biome_idx:
             self.current_biome_idx = biome_idx
             if self.biome_trigger_cd == 0:
-                self.biome_banner_idx   = biome_idx
-                self.biome_banner_name  = _BIOMES[biome_idx][0]
+                self.biome_banner_idx = biome_idx
+                self.biome_banner_name = _BIOMES[biome_idx][0]
                 self.biome_banner_timer = 240
-                self.biome_trigger_cd   = 300
+                self.biome_trigger_cd = 300
         if self.biome_trigger_cd > 0:
             self.biome_trigger_cd -= 1
         if self.biome_banner_timer > 0:
@@ -1349,6 +1466,12 @@ class Game:
                     else:  # platform / side wall (type 1)
                         pyxel.rect(sx, sy, TILE, TILE, wf)
                         pyxel.rectb(sx, sy, TILE, TILE, wb)
+
+        # Fractal Blaster background overlay (dithered, drawn above tiles but below entities)
+        for a in self.player.artifacts:
+            if isinstance(a, FractalBlaster):
+                a.draw_bg()
+                break
 
         for b in self.bullets:
             b.draw(cam)

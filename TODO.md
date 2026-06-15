@@ -4,18 +4,17 @@
 
 <!--None yet.-->
 
-It's possible for the player to get stuck if they go into a cave that's deep but has no exit. How can we update our worldgen search-tree algorithm to account for this and reject caves that would soft-lock the player?
+- Allow the debug menu to be traversed with gamepad.
 
-## Artifacts
-- Fractal Blaster: piercing shots that trace a constantly-shifting Julia set outline
-  - firing it briefly renders a dithered, rendered julia set in the background with the same constants as the current shot (both the outline and background julia set follow the same slowly drifting parameters)
-    - the background julia set should fade out smoothly within 3 seconds. re-firing the Fractal Blaster just clamps the fadeout to the top value again.
+- Player can't go through 2-block-high gaps in walls. Maybe lower their pushbox height very slightly? Or suggest another fix.
 
+- It's possible for the player to get stuck if they go into a cave that's deep but has no exit. How can we update our worldgen search-tree algorithm to account for this and reject caves that would soft-lock the player?
 
 ## Gameplay
 - Floors / progression (floor counter, difficulty scaling)
 
-
+- Synergy: Fractal Blaster and Wallbreaker: 10% chance for bullets to destroy walls if both are equipped next to eachother on the 5x5 grid.
+  - Need special UI notation for synergies. Perhaps a glowing, dithered link between the two items with a unique color?
 
 ## Worldgen
 - Difficulty scaling: denser spawns + harder enemies deeper down, but better artifacts.

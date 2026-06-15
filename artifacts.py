@@ -6,6 +6,7 @@ Each frame, Game calls artifact.on_frame(player, world, inputs) for every
 equipped artifact. Other hooks fire on specific events.
 """
 
+import math
 import random
 from collections import deque
 
@@ -126,8 +127,8 @@ class VampiricCape(Artifact):
     def __init__(self):
         # Circular buffer of (x, y) positions; oldest at index 0
         self._trail: deque = deque(maxlen=8)
-        self._tick     = 0   # frame counter for trail sample rate
-        self._decay_cd = 0   # frames until next oldest-ghost removal
+        self._tick = 0  # frame counter for trail sample rate
+        self._decay_cd = 0  # frames until next oldest-ghost removal
 
     def on_frame(self, player, world, inputs):
         self._tick += 1
@@ -140,8 +141,8 @@ class VampiricCape(Artifact):
             if self._decay_cd > 0:
                 self._decay_cd -= 1
             elif self._trail:
-                self._trail.popleft()   # drop oldest ghost
-                self._decay_cd = 12     # pace between removals
+                self._trail.popleft()  # drop oldest ghost
+                self._decay_cd = 12  # pace between removals
 
     def on_kill(self, player):
         if random.random() < 1 / 3:
@@ -156,3 +157,74 @@ class VampiricCape(Artifact):
                 col = self._TRAIL_COLORS[min(i, len(self._TRAIL_COLORS) - 1)]
                 pyxel.text(int(tx) + 2, sy + 1, "@", col)
                 pyxel.text(int(tx) + 2, sy + _TILE + 1, "W", col)
+
+
+class FractalBlaster(Artifact):
+    """Piercing shots that weave through space. Firing briefly reveals a fractal vision."""
+
+    # fmt: off
+    name        = "Fractal Blaster"
+    glyph       = "J"
+    description = "Shots pierce through enemies and weave through the air. Firing briefly tears a rift in space."
+    BG_LIFETIME = 180
+
+    _C_RE_BASE = -0.4;  _C_RE_AMP = 0.3;  _C_RE_FREQ = 0.003
+    _C_IM_BASE =  0.6;  _C_IM_AMP = 0.2;  _C_IM_FREQ = 0.002
+    # fmt: on
+
+    def __init__(self):
+        # fmt: off
+        self._t          = 0
+        self.bg_timer    = 0
+        self.c_re        = self._C_RE_BASE
+        self.c_im        = self._C_IM_BASE
+        self._cache      = None
+        self._cache_tick = -999
+        # fmt: on
+
+    def on_frame(self, player, world, inputs):
+        self._t += 1
+        self.c_re = (
+            self._C_RE_BASE + math.sin(self._t * self._C_RE_FREQ) * self._C_RE_AMP
+        )
+        self.c_im = (
+            self._C_IM_BASE + math.cos(self._t * self._C_IM_FREQ) * self._C_IM_AMP
+        )
+        if self.bg_timer > 0:
+            self.bg_timer -= 1
+
+    def draw_bg(self):
+        if self.bg_timer <= 0:
+            return
+        import numpy as np
+
+        if self._cache is None or (self._t - self._cache_tick) >= 3:
+            W, H, MAX_ITER = 30, 20, 20
+            re = np.linspace(-1.5, 1.5, W)
+            im = np.linspace(-1.0, 1.0, H)
+            zr, zi = np.meshgrid(re, im)
+            iters = np.full((H, W), MAX_ITER, dtype=np.int32)
+            mask = np.ones((H, W), dtype=bool)
+            with np.errstate(over="ignore", invalid="ignore"):
+                for n in range(MAX_ITER):
+                    zr2, zi2 = zr * zr, zi * zi
+                    escaped = mask & (zr2 + zi2 > 4.0)
+                    iters[escaped] = n
+                    mask &= ~escaped
+                    zi_new = 2 * zr * zi + self.c_im
+                    zr = zr2 - zi2 + self.c_re
+                    zi = zi_new
+            self._cache = iters
+            self._cache_tick = self._t
+
+        alpha = min(self.bg_timer / self.BG_LIFETIME, 0.5)
+        pyxel.dither(alpha)
+        S = 8
+        for ry in range(20):
+            for rx in range(30):
+                n = int(self._cache[ry, rx])
+                if n == 20:  # in-set: dark purple
+                    pyxel.rect(rx * S, ry * S, S, S, 2)
+                elif n >= 13:  # near-boundary: navy
+                    pyxel.rect(rx * S, ry * S, S, S, 1)
+        pyxel.dither(1.0)

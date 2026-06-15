@@ -1,5 +1,6 @@
 # Done
 
+- Fractal Blaster artifact: shots trace real Julia set boundary (boundary cells extracted from cached grid, sorted by projection onto firing direction, bullet hops between waypoints); pierces enemies AND terrain; dithered Julia set background overlay on fire (3s fade, capped at 50% alpha; re-fire resets timer); slowly drifting c parameter
 - Artifact pickup dialogue: Tab/Start now dismisses dialogue and opens body panel; hint text updated to show both options ("Z dismiss / Tab install")
 - Missile refill canisters: 1/5 drop chance on enemy kill; refills 5 ammo to least-full equipped missile; 10s lifetime, blinks last 3s (6f on/off cyan/white), despawns on pickup or timeout
 - Bug: frozen enemies now keep original sprite/glyph tinted blue (dither(0.5) navy overlay for Flyer sprite; cyan glyph color for text enemies); previously replaced with nav rect
