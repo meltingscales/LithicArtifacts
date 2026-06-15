@@ -82,7 +82,7 @@ Early concept. Not yet started.
 
 ## Influences
 
-| Game | What we're stealing |
+| Media | What we're stealing |
 |---|---|
 | Caves of Qud | Body modification system, emergent mutation interactions |
 | Metroid Fusion | Body horror aesthetic, organism absorption, sense of dread |
