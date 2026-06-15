@@ -14,7 +14,6 @@ None yet.
 - Floors / progression (floor counter, difficulty scaling)
 
 
-- When you pick up an artifact, suggest the player dismiss (already does this) or pause to install their artifact, and allow them to pause.
 
 ## Worldgen
 - Difficulty scaling: denser spawns + harder enemies deeper down, but better artifacts.

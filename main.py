@@ -466,6 +466,9 @@ class Game:
             self.pickup_dialogue = None
             # Suppress the shoot that would fire next frame (btn vs btnp)
             self.player.shoot_cd = SHOOT_COOLDOWN
+        elif pyxel.btnp(pyxel.KEY_TAB) or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_START):
+            self.pickup_dialogue = None
+            self.paused = True
 
     def _draw_pickup_dialogue(self, cls):
         pw, ph = 204, 92
@@ -478,7 +481,8 @@ class Game:
         pyxel.text(px0 + 4, py0 + 20, f"{cls.glyph}  {cls.name}", YELLOW)
         for i, ln in enumerate(self._wrap(cls.description, 46)[:3]):
             pyxel.text(px0 + 4, py0 + 34 + i * 10, ln, LIGHT_GRAY)
-        pyxel.text(px0 + 4, py0 + ph - 11, "Z / X  continue", DARK_GRAY)
+        pyxel.text(px0 + 4, py0 + ph - 19, "Z / X  dismiss", DARK_GRAY)
+        pyxel.text(px0 + 4, py0 + ph - 10, "Tab / Start  open body to install", DARK_GRAY)
 
     # -- pick / place helpers --
 
