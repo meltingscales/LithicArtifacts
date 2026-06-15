@@ -800,11 +800,29 @@ class Game:
                 p.vy = 0.0
         else:
             br = int(p.bottom // TILE)
+            ph = TILE if p.crouching else P_H
             if self.world.solid(lc, br) or self.world.solid(rc, br):
-                p.y = float(br * TILE - (TILE if p.crouching else P_H))
+                p.y = float(br * TILE - ph)
                 p.vy = 0.0
                 p.on_ground = True
                 p.jump_type = "none"
+            else:
+                # Frozen enemies act as platforms
+                pl = p.x + P_HIT_INS
+                pr = p.right - P_HIT_INS
+                for e in self.enemies:
+                    if (
+                        e.alive
+                        and e.frozen_timer > 0
+                        and pl < e.right
+                        and pr > e.x
+                        and e.y <= p.bottom < e.y + TILE
+                    ):
+                        p.y = e.y - ph
+                        p.vy = 0.0
+                        p.on_ground = True
+                        p.jump_type = "none"
+                        break
 
     def _probe_walls(self, p):
         """Detect passive wall contact (for wall jump without pressing into wall)."""
@@ -1142,7 +1160,7 @@ class Game:
         # Damage player (enemy contact, then enemy bullets; one source per inv window)
         if p.inv_cd == 0 and not self.immortal:
             for e in self.enemies:
-                if e.alive and (
+                if e.alive and e.frozen_timer == 0 and (
                     p.x < e.right
                     and p.right > e.x
                     and p.y < e.bottom
