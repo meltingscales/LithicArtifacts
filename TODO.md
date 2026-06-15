@@ -11,8 +11,6 @@
 ## Gameplay
 - Floors / progression (floor counter, difficulty scaling)
 
-- Synergy: Fractal Blaster and Wallbreaker: 10% chance for FractalBullet objects to destroy walls if both are equipped next to eachother on the 5x5 grid.
-  - Need special UI notation for synergies. Perhaps a glowing, dithered line between the two items with a unique color?
 
 ## Worldgen
 - Difficulty scaling: denser spawns + harder enemies deeper down, but better artifacts.

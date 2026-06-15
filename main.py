@@ -248,10 +248,13 @@ class FractalBullet:
         self.hit_enemies: set = set()
         # fmt: on
         self._waypoints = self._build_waypoints(x, y, nx, ny, julia_cache, cam)
-        self._wp_idx          = 0  # fmt: skip
-        self._jitter          = random.uniform(-0.2, 0.2)  # fmt: skip
-        self._splinter_events = 0  # fmt: skip
+        self._wp_idx           = 0  # fmt: skip
+        self._jitter           = random.uniform(-0.2, 0.2)  # fmt: skip
+        self._splinter_events  = 0  # fmt: skip
         self.pending_splinters: list = []
+        self.synergy_wall_break = (
+            False  # set True by FractalBlaster+Wallbreaker adjacency
+        )
 
     @staticmethod
     def _build_waypoints(gx, gy, nx, ny, cache, cam):
@@ -296,9 +299,9 @@ class FractalBullet:
                     base = random.uniform(0, math.tau)
                     for i in range(2):
                         angle = base + i * math.pi + random.uniform(-0.5, 0.5)
-                        self.pending_splinters.append(
-                            FractalBulletSmall(self.x, self.y, angle)
-                        )
+                        s = FractalBulletSmall(self.x, self.y, angle)
+                        s.synergy_wall_break = self.synergy_wall_break
+                        self.pending_splinters.append(s)
             else:
                 c, s = math.cos(self._jitter), math.sin(self._jitter)
                 jx = (ddx * c - ddy * s) / dist * self.SPEED
@@ -311,7 +314,11 @@ class FractalBullet:
         self.life -= 1
         if self.life <= 0:
             self.alive = False
-        # Pierces terrain — no world.solid() check
+        # Pierces terrain — passes through walls; synergy may destroy them
+        if self.synergy_wall_break:
+            col, row = int(self.x // TILE), int(self.y // TILE)
+            if world.solid(col, row) and random.random() < 0.10:
+                world.destroy(col, row)
 
     def draw(self, cam):
         sy = int(self.y - cam)
@@ -335,10 +342,11 @@ class FractalBulletSmall:
         self.y           = float(y)
         self._vx         = math.cos(angle) * self.SPEED
         self._vy         = math.sin(angle) * self.SPEED
-        self.life        = self.LIFETIME
-        self.alive       = True
-        self.piercing    = True
-        self.hit_enemies: set = set()
+        self.life               = self.LIFETIME
+        self.alive              = True
+        self.piercing           = True
+        self.hit_enemies: set   = set()
+        self.synergy_wall_break = False
         # fmt: on
 
     def update(self, world):
@@ -347,7 +355,11 @@ class FractalBulletSmall:
         self.life -= 1
         if self.life <= 0:
             self.alive = False
-        # Pierces terrain — no wall check; can_break_walls never set
+        # Pierces terrain — passes through walls; synergy may destroy them
+        if self.synergy_wall_break:
+            col, row = int(self.x // TILE), int(self.y // TILE)
+            if world.solid(col, row) and random.random() < 0.10:
+                world.destroy(col, row)
 
     def draw(self, cam):
         sy = int(self.y - cam)
@@ -611,6 +623,19 @@ class Game:
             self.player.burrowing = False
             self.player.crouching = False
 
+    def _fractal_wallbreaker_synergy(self):
+        """True if FractalBlaster and Wallbreaker are 4-dir adjacent in body_grid."""
+        for r in range(5):
+            for c in range(5):
+                if not isinstance(self.body_grid[r][c], FractalBlaster):
+                    continue
+                for dr, dc in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+                    nr, nc = r + dr, c + dc
+                    if 0 <= nr < 5 and 0 <= nc < 5:
+                        if isinstance(self.body_grid[nr][nc], Wallbreaker):
+                            return True
+        return False
+
     # ---- pickup dialogue ----
 
     def _update_pickup_dialogue(self):
@@ -818,6 +843,25 @@ class Game:
                     pyxel.text(x0 + 3, y0 + 3, self.held.glyph, ORANGE)
                 elif a:
                     pyxel.text(x0 + 3, y0 + 3, a.glyph, LIGHT_GRAY)
+
+        # Synergy link: pulsing line between adjacent FractalBlaster ↔ Wallbreaker
+        half = (_CELL - 1) // 2
+        pulse = 0.4 + 0.6 * ((pyxel.frame_count // 8) % 2)
+        for r in range(5):
+            for c in range(5):
+                if not isinstance(self.body_grid[r][c], FractalBlaster):
+                    continue
+                for dr, dc in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+                    nr, nc = r + dr, c + dc
+                    if 0 <= nr < 5 and 0 <= nc < 5:
+                        if isinstance(self.body_grid[nr][nc], Wallbreaker):
+                            ax = _GX + c * _CELL + half
+                            ay = _GY + r * _CELL + half
+                            bx = _GX + nc * _CELL + half
+                            by = _GY + nr * _CELL + half
+                            pyxel.dither(pulse)
+                            pyxel.line(ax, ay, bx, by, 14)
+                            pyxel.dither(1.0)
 
         # "HOLDING" indicator below the grid
         if self.held:
@@ -1302,6 +1346,7 @@ class Game:
                     b = FractalBullet(
                         p.gun_x, p.gun_y, dx, dy, fractal._cache, self.cam_y
                     )
+                    b.synergy_wall_break = self._fractal_wallbreaker_synergy()
                     fractal.bg_timer = FractalBlaster.BG_LIFETIME
                 else:
                     b = Bullet(p.gun_x, p.gun_y, dx, dy)
