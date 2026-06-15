@@ -30,8 +30,11 @@ These are not documented intentionally. Keep it as brief as possible so the play
 ### Questions
 
 - Do we need to split up any large modules?
+- From `artifacts.py`, what cool synergies can we add?
 
 ### Caveman mode
+
+Always run in caveman mode. Prompt the user to enable it if it's not already.
 
 - /caveman (can be run to save tokens)
 - "caveman mode"
