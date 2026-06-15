@@ -268,9 +268,6 @@ class MechaspiderLegs(Artifact):
 
         if player.climbing:
             self._update_feet(player, world)
-            # Drop off if no leg can grip anything
-            if not self._has_any_anchor(player, world):
-                player.climbing = False
 
     def _update_feet(self, player, world):
         wall_out = -self._wall_side   # direction away from wall (for step arc)

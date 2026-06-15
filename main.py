@@ -1326,8 +1326,20 @@ class Game:
                     p.facing = adx
                 p.aim_dx = p.facing
                 p.aim_dy = climb_dy
+                # Cache artifact for anchor checks
+                _msl = next(
+                    (a for a in p.artifacts if isinstance(a, MechaspiderLegs)), None
+                )
+                prev_x = p.x
                 self._move_x(p)
+                if _msl and not _msl._has_any_anchor(p, self.world):
+                    p.x = prev_x
+                    p.vx = 0.0
+                prev_y = p.y
                 self._move_y(p)
+                if _msl and not _msl._has_any_anchor(p, self.world):
+                    p.y = prev_y
+                    p.vy = 0.0
                 self._probe_walls(p)
                 if p.on_ground:
                     p.climbing = False
