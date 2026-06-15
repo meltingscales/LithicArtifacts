@@ -41,8 +41,6 @@ Viv Wings
 None yet.
 
 ## Later
-- Set up steam packaging and GitHub CICD
-
 
 - Set up steam packaging and GitHub CICD
   - For a working example, see CICD and scripts in ~/Git/LithicRivers.
