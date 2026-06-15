@@ -11,17 +11,14 @@ import random
 import pyxel
 
 # fmt: off
-_TILE           = 8      # mirror of TILE in main.py
-_SCREEN_H       = 160    # mirror of SCREEN_H in main.py
-_RED            = 8      # pyxel palette index
-_GRAVITY        = 0.25
-_MAX_FALL       = 2.0
-_CRAWLER_SPEED  = 0.5
-_FLYER_SPEED    = 0.6
-_FLYER_AMP      = 18     # vertical oscillation amplitude (px)
-_FLYER_FREQ     = 0.04   # radians per frame
-_SHOOT_INTERVAL = 120    # frames between ShootyFlier shots
-_SHOOT_RANGE    = 96     # px; ShootyFlier won't fire beyond this
+from constants import (
+    TILE as _TILE, SCREEN_H as _SCREEN_H,
+    GRAVITY as _GRAVITY, MAX_FALL as _MAX_FALL,
+    CRAWLER_SPEED as _CRAWLER_SPEED, FLYER_SPEED as _FLYER_SPEED,
+    FLYER_AMP as _FLYER_AMP, FLYER_FREQ as _FLYER_FREQ,
+    SHOOT_INTERVAL as _SHOOT_INTERVAL, SHOOT_RANGE as _SHOOT_RANGE,
+)
+_RED = 8  # pyxel palette index
 # fmt: on
 
 

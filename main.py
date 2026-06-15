@@ -5,16 +5,20 @@ import random
 # fmt: off
 from artifacts import FractalBlaster, IceMissile, MissileArtifact, SpiralBorer, VampiricCape, Wallbreaker
 from enemies   import Crawler, Flyer, ShootyFlier, EnemyBullet
-from worldgen  import gen_section, SECTION_H
+from worldgen  import gen_section
 from synergies import fractal_wallbreaker_active, fractal_wallbreaker_pairs
+from constants import (
+    SCREEN_W, SCREEN_H, TILE, COLS,
+    PREAMBLE_ROWS, SECTION_H, BIOME_SECTION_LEN,
+    GRAVITY, MAX_FALL, MOVE_SPEED,
+    JUMP_VEL, WALL_JUMP_VEL, WALL_JUMP_HVX, WALL_JUMP_CD,
+    BULLET_SPEED, SHOOT_COOLDOWN, DEATH_HOLD,
+    P_HIT_INS, CANISTER_DROP_CHANCE, SYNERGY_WALL_BREAK_CHANCE,
+    DEFAULT_SEED, SEED_WALLS, SEED_EMPTY, SEED_GAUNTLET,
+)
 # fmt: on
 
 # fmt: off
-SCREEN_W = 240
-SCREEN_H = 160
-TILE     = 8
-COLS     = SCREEN_W // TILE
-
 BLACK      = 0
 DARK_GRAY  = 5
 LIGHT_GRAY = 6
@@ -22,8 +26,8 @@ YELLOW     = 10
 ORANGE     = 9
 BROWN      = 4
 
-# fmt: off
-BIOME_SECTION_LEN = 6   # dungeon sections per biome
+P_W = TILE
+P_H = TILE * 2
 
 _BIOMES = [
     # name        bg  wall_fill  wall_brd  cave_fill  cave_brd
@@ -43,36 +47,17 @@ def biome_for_row(abs_row):
     return (section_idx // BIOME_SECTION_LEN) % len(_BIOMES)
 
 
-# Pause / body-panel layout
-_CELL = 13  # body-grid cell pitch (12 px visible + 1 px gap)
-_GX = 8  # body grid left edge
-_GY = 18  # body grid top edge
-_IX = 82  # inventory list left edge
-_IY = 18  # inventory list top edge
-_IRH = 10  # inventory row height
+# Pause / body-panel layout (UI-only; not in constants.py)
+# fmt: off
+_CELL = 13   # body-grid cell pitch (12 px visible + 1 px gap)
+_GX   = 8    # body grid left edge
+_GY   = 18   # body grid top edge
+_IX   = 82   # inventory list left edge
+_IY   = 18   # inventory list top edge
+_IRH  = 10   # inventory row height
 _TIPY = 131  # tooltip divider y
-_HOVER = 180  # frames of hover before description appears (3 s @ 60 fps)
-
-GRAVITY = 0.25
-MAX_FALL = 4.0
-MOVE_SPEED = 1.5
-JUMP_VEL = -4.5
-WALL_JUMP_VEL = -4.0
-WALL_JUMP_HVX = 2.0
-WALL_JUMP_CD = 24  # frames before same-side wall jump allowed again
-
-BULLET_SPEED = 5.0
-SHOOT_COOLDOWN = 12
-DEATH_HOLD = 90  # frames of death screen before respawn prompt appears
-
-P_W = TILE
-P_H = TILE * 2
-P_HIT_INS = (
-    1  # horizontal inset for floor/ceiling checks; lets player slip into 1-tile gaps
-)
-
-PREAMBLE_ROWS = 15  # hardcoded entrance rows; sections begin here
-DEFAULT_SEED  = 314159  # default run seed; shown in pause menu
+_HOVER = 180 # frames of hover before description appears (3 s @ 60 fps)
+# fmt: on
 _ARTIFACT_POOL = [
     SpiralBorer,
     VampiricCape,
@@ -106,7 +91,7 @@ class World:
             self.tiles[(COLS - 1, y)]   = 1
             # fmt: on
 
-        if seed == 0:
+        if seed == SEED_WALLS:
             # Wall playground: 4 vertical walls with 2-tile-high gaps at
             # different heights — tests gap traversal and SpiralBorer phasing.
             # fmt: off
@@ -142,10 +127,10 @@ class World:
                 self.rng, abs_start, self._free_l, self._free_r, art_cls
             )
             # Special-seed overrides (see SPECIAL-SEEDS.md)
-            if self.seed == 1:   # empty world — strip interior tiles + spawns
+            if self.seed == SEED_EMPTY:   # empty world — strip interior tiles + spawns
                 tiles  = {k: v for k, v in tiles.items() if k[0] in (0, COLS - 1)}
                 spawns = []
-            elif self.seed == 2:  # gauntlet — guarantee all enemy types per section
+            elif self.seed == SEED_GAUNTLET:  # gauntlet — guarantee all enemy types per section
                 mid_r = abs_start + SECTION_H // 2
                 cx    = (fl + fr) // 2  # fmt: skip
                 spawns += [
@@ -343,7 +328,7 @@ class FractalBullet:
         # Pierces terrain — passes through walls; synergy may destroy them
         if self.synergy_wall_break:
             col, row = int(self.x // TILE), int(self.y // TILE)
-            if world.solid(col, row) and random.random() < 0.10:
+            if world.solid(col, row) and random.random() < SYNERGY_WALL_BREAK_CHANCE:
                 world.destroy(col, row)
 
     def draw(self, cam):
@@ -991,7 +976,7 @@ class Game:
         return pyxel.btnp(pyxel.GAMEPAD1_BUTTON_BACK)
 
     def _maybe_drop_canister(self, e):
-        if random.random() < 0.2:
+        if random.random() < CANISTER_DROP_CHANCE:
             self.canisters.append(MissileCanister(e.x, e.y))
 
     def _active_missile(self):

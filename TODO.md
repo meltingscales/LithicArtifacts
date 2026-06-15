@@ -45,11 +45,8 @@ Viv Wings
 ## Later
 - Set up pyinstaller release for Steam distribution
   - For a working example, see CICD and scripts in ~/Git/LithicRivers.
-
-- Question: Should we make these python scripts into their own module in a folder called `./lithicartifacts/`?
+  - Question: Should we make these python scripts into their own module in a folder called `./lithicartifacts/`? (No, do this later when packaging for pyinstaller)
 
 ## Core/Architecture
 
 
-- Pull RNG-related things and other important constants out into CONSTANTS_NAMED_LIKE_THIS in `constants.py` so we can easily tweak them. Things like worldgen, item spawn chances, etc.
-  - also store special seeds as constants in `constants.py`

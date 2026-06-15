@@ -13,8 +13,7 @@ from collections import deque
 import pyxel
 
 # fmt: off
-_TILE      = 8     # mirror of TILE in main.py
-_SCREEN_H  = 160   # mirror of SCREEN_H
+from constants import TILE as _TILE, SCREEN_H as _SCREEN_H, ICE_MISSILE_MAX_AMMO
 # fmt: on
 
 
@@ -101,7 +100,7 @@ class IceMissile(MissileArtifact):
     glyph       = "~"
     description = ("Fires freezing missiles (hold RB+Z). "
                    "Limited ammo.")
-    MAX_AMMO    = 30
+    MAX_AMMO    = ICE_MISSILE_MAX_AMMO
     # fmt: on
 
     def __init__(self):

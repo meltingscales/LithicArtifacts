@@ -21,16 +21,11 @@ from collections import deque
 
 import noise as _noise
 
-# Mirrors of main.py constants (no import to avoid circular deps)
-# fmt: off
-_COLS             = 30
-_SECTION_H        = 20
-_MIN_FREE         = 4     # narrowest permitted corridor (must fit the player)
-_JUMP_H           = 4     # max tiles the player can jump upward (for BFS)
-_CAVE_MAX_RETRIES = 15    # retry budget for cave traversability check
-
-SECTION_H = _SECTION_H   # exported for main.py
-# fmt: on
+from constants import (
+    COLS, SECTION_H, CORRIDORCORRIDOR_MIN_FREE, BFSBFS_JUMP_H, CAVE_MAX_RETRIES,
+    STYPE_WEIGHTS, PLAT_DENSITY_PLATFORMS, PLAT_DENSITY_OPEN,
+    PLAT_DENSITY_CAVE_FALLBACK, SPAWN_DENSITY_PLATFORMS, SPAWN_DENSITY_DEFAULT,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -59,15 +54,15 @@ def gen_section(rng, abs_start_row, entry_free_l, entry_free_r, artifact_cls=Non
     """
     stype = rng.choices(
         ("open", "platforms", "chamber", "cave"),
-        weights=(0.20, 0.35, 0.15, 0.30),
+        weights=STYPE_WEIGHTS,
     )[0]
 
     # Drift the corridor centre within ±4 cols, clamped to leave room for wings
     cx = (entry_free_l + entry_free_r) // 2
-    cx = max(5, min(_COLS - 6, cx + rng.randint(-4, 4)))
+    cx = max(5, min(COLS - 6, cx + rng.randint(-4, 4)))
 
     # fmt: off
-    free_w = max(_MIN_FREE, {
+    free_w = max(CORRIDOR_MIN_FREE, {
         'open':      rng.randint(10, 16),
         'platforms': rng.randint(5,  9),
         'chamber':   rng.randint(12, 18),
@@ -76,26 +71,26 @@ def gen_section(rng, abs_start_row, entry_free_l, entry_free_r, artifact_cls=Non
     # fmt: on
 
     free_l = max(1, cx - free_w // 2)
-    free_r = min(_COLS - 2, free_l + free_w - 1)
+    free_r = min(COLS - 2, free_l + free_w - 1)
     free_l = max(1, free_r - free_w + 1)  # re-clamp after right side clamped
 
     tiles = {}
     pickup = None
 
     # Side walls for every row in the section
-    for r in range(_SECTION_H):
+    for r in range(SECTION_H):
         row = abs_start_row + r
         # fmt: off
         tiles[(0, row)]          = 1
-        tiles[(_COLS - 1, row)]  = 1
+        tiles[(COLS - 1, row)]  = 1
         # fmt: on
 
     if stype == "platforms":
-        _gen_platforms(rng, tiles, abs_start_row, free_l, free_r, density=0.32)
+        _gen_platforms(rng, tiles, abs_start_row, free_l, free_r, density=PLAT_DENSITY_PLATFORMS)
     elif stype == "open":
-        _gen_platforms(rng, tiles, abs_start_row, free_l, free_r, density=0.14)
+        _gen_platforms(rng, tiles, abs_start_row, free_l, free_r, density=PLAT_DENSITY_OPEN)
     elif stype == "cave":
-        for attempt in range(_CAVE_MAX_RETRIES):
+        for attempt in range(CAVE_MAX_RETRIES):
             cave_tiles = {}
             _gen_cave(rng, cave_tiles, abs_start_row, free_l, free_r)
             if _is_traversable(cave_tiles, abs_start_row, free_l, free_r):
@@ -103,7 +98,7 @@ def gen_section(rng, abs_start_row, entry_free_l, entry_free_r, artifact_cls=Non
                 break
         else:
             # All retries failed — fall back to an open section
-            _gen_platforms(rng, tiles, abs_start_row, free_l, free_r, density=0.08)
+            _gen_platforms(rng, tiles, abs_start_row, free_l, free_r, density=PLAT_DENSITY_CAVE_FALLBACK)
     else:  # chamber
         _gen_chamber(rng, tiles, abs_start_row, free_l, free_r)
 
@@ -126,7 +121,7 @@ def _gen_platforms(rng, tiles, abs_start, free_l, free_r, density):
     Left wing: columns 1 to free_l-1.
     Right wing: columns free_r+1 to COLS-2.
     """
-    for r in range(2, _SECTION_H - 1):
+    for r in range(2, SECTION_H - 1):
         if rng.random() >= density:
             continue
         row = abs_start + r
@@ -139,10 +134,10 @@ def _gen_platforms(rng, tiles, abs_start, free_l, free_r, density):
                 tiles[(c, row)] = 1
 
         # Right wing
-        if free_r < _COLS - 4 and rng.random() < 0.65:
-            pw = rng.randint(2, max(2, _COLS - 2 - free_r - 1))
-            pr = rng.randint(free_r + 1, max(free_r + 1, _COLS - 2 - pw))
-            for c in range(pr, min(pr + pw, _COLS - 1)):
+        if free_r < COLS - 4 and rng.random() < 0.65:
+            pw = rng.randint(2, max(2, COLS - 2 - free_r - 1))
+            pr = rng.randint(free_r + 1, max(free_r + 1, COLS - 2 - pw))
+            for c in range(pr, min(pr + pw, COLS - 1)):
                 tiles[(c, row)] = 1
 
 
@@ -152,25 +147,25 @@ def _gen_chamber(rng, tiles, abs_start, free_l, free_r):
     free corridor.  Optional wing platform inside the room.
     """
     top = abs_start + 1
-    bot = abs_start + _SECTION_H - 2
-    for c in range(1, _COLS - 1):
+    bot = abs_start + SECTION_H - 2
+    for c in range(1, COLS - 1):
         if not (free_l <= c <= free_r):
             tiles[(c, top)] = 1
             tiles[(c, bot)] = 1
 
     # Optional interior wing platform
     if rng.random() < 0.55:
-        mid = abs_start + _SECTION_H // 2
+        mid = abs_start + SECTION_H // 2
         side = rng.choice(("left", "right"))
         if side == "left" and free_l > 4:
             pw = rng.randint(2, max(2, free_l - 2))
             pl = rng.randint(1, max(1, free_l - pw - 1))
             for c in range(pl, min(pl + pw, free_l)):
                 tiles[(c, mid)] = 1
-        elif side == "right" and free_r < _COLS - 5:
-            pw = rng.randint(2, max(2, _COLS - 2 - free_r - 1))
-            pr = rng.randint(free_r + 1, max(free_r + 1, _COLS - 2 - pw))
-            for c in range(pr, min(pr + pw, _COLS - 1)):
+        elif side == "right" and free_r < COLS - 5:
+            pw = rng.randint(2, max(2, COLS - 2 - free_r - 1))
+            pr = rng.randint(free_r + 1, max(free_r + 1, COLS - 2 - pw))
+            for c in range(pr, min(pr + pw, COLS - 1)):
                 tiles[(c, mid)] = 1
 
 
@@ -179,7 +174,7 @@ def _gen_cave(rng, tiles, abs_start, free_l, free_r):
     Perlin-noise cave section.  Solid cells become tile type 2 (cave rock).
     The free corridor [free_l..free_r] is always cleared so the BFS always
     has a candidate path; the retry loop validates more complex routes too.
-    Side walls (col 0 and _COLS-1) are added by the caller.
+    Side walls (col 0 and COLS-1) are added by the caller.
     """
     # Fresh random offsets per attempt so retries look different
     ox = rng.uniform(0, 1000)
@@ -188,9 +183,9 @@ def _gen_cave(rng, tiles, abs_start, free_l, free_r):
     scale     = 0.18   # spatial frequency — higher = smaller features
     threshold = -0.05  # pnoise2 values above this → solid cave rock (~52% fill)
     # fmt: on
-    for r in range(_SECTION_H):
+    for r in range(SECTION_H):
         row = abs_start + r
-        for c in range(1, _COLS - 1):
+        for c in range(1, COLS - 1):
             if free_l <= c <= free_r:
                 continue  # always keep the corridor open
             n = _noise.pnoise2(ox + c * scale, oy + r * scale, octaves=2)
@@ -208,14 +203,14 @@ def _is_traversable(tiles, abs_start, free_l, free_r):
 
     Rejects caves where side pockets are reachable but have no exit.
     """
-    bot = abs_start + _SECTION_H
+    bot = abs_start + SECTION_H
 
     def solid(c, r):
         return (c, r) in tiles
 
     def fits(c, f):
         return (
-            1 <= c <= _COLS - 2
+            1 <= c <= COLS - 2
             and abs_start <= f < bot
             and not solid(c, f)
             and not solid(c, f - 1)
@@ -240,7 +235,7 @@ def _is_traversable(tiles, abs_start, free_l, free_r):
                     lf = fall_to(nc, foot)
                     if fits(nc, lf):
                         nxt.append((nc, lf))
-            for dh in range(1, _JUMP_H + 1):
+            for dh in range(1, BFS_JUMP_H + 1):
                 pf = foot - dh
                 if pf < abs_start:
                     break
@@ -308,14 +303,14 @@ def _is_traversable(tiles, abs_start, free_l, free_r):
 def _gen_spawns(rng, tiles, abs_start, stype):
     """Place enemy spawns on top of solid tiles that have open space above."""
     spawns = []
-    density = 0.28 if stype == "platforms" else 0.12
-    for r in range(1, _SECTION_H - 1):
+    density = SPAWN_DENSITY_PLATFORMS if stype == "platforms" else SPAWN_DENSITY_DEFAULT
+    for r in range(1, SECTION_H - 1):
         row = abs_start + r
         if rng.random() >= density:
             continue
         candidates = [
             c
-            for c in range(1, _COLS - 1)
+            for c in range(1, COLS - 1)
             if (c, row) in tiles and (c, row - 1) not in tiles
         ]
         if not candidates:
@@ -339,6 +334,6 @@ def _place_pickup(tiles, abs_start, free_l, free_r, artifact_cls):
     Adds one pedestal tile; returns (pedestal_col, row_above, artifact_cls).
     """
     mid_c = (free_l + free_r) // 2
-    ped_r = abs_start + _SECTION_H // 2
+    ped_r = abs_start + SECTION_H // 2
     tiles[(mid_c, ped_r)] = 1  # pedestal tile
     return (mid_c, ped_r - 1, artifact_cls)  # pickup sits one row above pedestal

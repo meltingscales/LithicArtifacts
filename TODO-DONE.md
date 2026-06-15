@@ -1,5 +1,7 @@
 # Done
 
+- Refactor: gameplay constants extracted to `constants.py`; all mirror defs and inline magic numbers replaced across main.py, worldgen.py, enemies.py, artifacts.py
+
 - Refactor: synergy detection extracted to `synergies.py`; `fractal_wallbreaker_pairs/active(body_grid)` replace duplicated adjacency loops in main.py
 
 - Seeded runs: DEFAULT_SEED=314159, seed shown in pause menu, F1→Restart[N] for full reset; special seeds 0 (wall playground), 1 (empty), 2 (gauntlet); SPECIAL-SEEDS.md created
