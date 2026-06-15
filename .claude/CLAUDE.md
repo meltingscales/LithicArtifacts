@@ -15,6 +15,12 @@ See .claude/current-context.md
 `# fmt: on` so the formatter leaves them alone. New aligned blocks should get
 the same treatment.
 
+## In-game item descriptions
+
+Keep somewhat vague. Just enough for the player to guess what it does without specific numbers.
+
+"A spectral cape that drinks the life from fallen foes." is preferred over "A cape that has a chance to heal 1/3 times per kill. Leaves a spectral trail".
+
 ## Reusable prompts (for user)
 
 ### Questions

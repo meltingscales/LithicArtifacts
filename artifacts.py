@@ -62,8 +62,7 @@ class SpiralBorer(Artifact):
     # fmt: off
     name        = "Spiral Borer"
     glyph       = "B"
-    description = ("Phase through solid floors without destroying them. "
-                   "Commitment — burrowing ends only when you emerge below.")
+    description = ("Phase through solid floors without destroying them.")
     # fmt: on
 
     def on_frame(self, player, world, inputs):
@@ -100,13 +99,12 @@ class IceMissile(MissileArtifact):
     name        = "Ice Missiles"
     glyph       = "~"
     description = ("Fires freezing missiles (hold RB+Z). "
-                   "Hits freeze enemies for 5 s and deal 2 damage. "
                    "Limited ammo.")
     MAX_AMMO    = 30
     # fmt: on
 
     def __init__(self):
-        self.ammo     = 10
+        self.ammo = 10
         self.max_ammo = self.MAX_AMMO
 
 
@@ -117,8 +115,7 @@ class VampiricCape(Artifact):
     # fmt: off
     name        = "Vampiric Cape"
     glyph       = "V"
-    description = ("A cape that drinks the life from fallen foes (1-in-3 chance "
-                   "to heal 1 HP on kill) and leaves a spectral trail as you move.")
+    description = ("A spectral cape that drinks the life from fallen foes.")
     # fmt: on
 
     # Pyxel color indices, oldest ghost → newest ghost (8 steps)
