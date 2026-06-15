@@ -6,6 +6,7 @@ import random
 from artifacts import FractalBlaster, IceMissile, MissileArtifact, SpiralBorer, VampiricCape, Wallbreaker
 from enemies   import Crawler, Flyer, ShootyFlier, EnemyBullet
 from worldgen  import gen_section, SECTION_H
+from synergies import fractal_wallbreaker_active, fractal_wallbreaker_pairs
 # fmt: on
 
 # fmt: off
@@ -668,19 +669,6 @@ class Game:
             self.player.burrowing = False
             self.player.crouching = False
 
-    def _fractal_wallbreaker_synergy(self):
-        """True if FractalBlaster and Wallbreaker are 4-dir adjacent in body_grid."""
-        for r in range(5):
-            for c in range(5):
-                if not isinstance(self.body_grid[r][c], FractalBlaster):
-                    continue
-                for dr, dc in ((-1, 0), (1, 0), (0, -1), (0, 1)):
-                    nr, nc = r + dr, c + dc
-                    if 0 <= nr < 5 and 0 <= nc < 5:
-                        if isinstance(self.body_grid[nr][nc], Wallbreaker):
-                            return True
-        return False
-
     # ---- pickup dialogue ----
 
     def _update_pickup_dialogue(self):
@@ -893,21 +881,14 @@ class Game:
         # Synergy link: pulsing line between adjacent FractalBlaster ↔ Wallbreaker
         half = (_CELL - 1) // 2
         pulse = 0.4 + 0.6 * ((pyxel.frame_count // 8) % 2)
-        for r in range(5):
-            for c in range(5):
-                if not isinstance(self.body_grid[r][c], FractalBlaster):
-                    continue
-                for dr, dc in ((-1, 0), (1, 0), (0, -1), (0, 1)):
-                    nr, nc = r + dr, c + dc
-                    if 0 <= nr < 5 and 0 <= nc < 5:
-                        if isinstance(self.body_grid[nr][nc], Wallbreaker):
-                            ax = _GX + c * _CELL + half
-                            ay = _GY + r * _CELL + half
-                            bx = _GX + nc * _CELL + half
-                            by = _GY + nr * _CELL + half
-                            pyxel.dither(pulse)
-                            pyxel.line(ax, ay, bx, by, 14)
-                            pyxel.dither(1.0)
+        for r, c, nr, nc in fractal_wallbreaker_pairs(self.body_grid):
+            ax = _GX + c  * _CELL + half
+            ay = _GY + r  * _CELL + half
+            bx = _GX + nc * _CELL + half
+            by = _GY + nr * _CELL + half
+            pyxel.dither(pulse)
+            pyxel.line(ax, ay, bx, by, 14)
+            pyxel.dither(1.0)
 
         # "HOLDING" indicator below the grid
         if self.held:
@@ -1422,7 +1403,7 @@ class Game:
                     b = FractalBullet(
                         p.gun_x, p.gun_y, dx, dy, fractal._cache, self.cam_y
                     )
-                    b.synergy_wall_break = self._fractal_wallbreaker_synergy()
+                    b.synergy_wall_break = fractal_wallbreaker_active(self.body_grid)
                     fractal.bg_timer = FractalBlaster.BG_LIFETIME
                 else:
                     b = Bullet(p.gun_x, p.gun_y, dx, dy)

@@ -50,7 +50,6 @@ Viv Wings
 
 ## Core/Architecture
 
-- Synergy logic should be in `synergies.py`.
 
 - Pull RNG-related things and other important constants out into CONSTANTS_NAMED_LIKE_THIS in `constants.py` so we can easily tweak them. Things like worldgen, item spawn chances, etc.
   - also store special seeds as constants in `constants.py`
