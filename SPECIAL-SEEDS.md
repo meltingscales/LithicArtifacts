@@ -9,11 +9,15 @@ The default seed is **314159**.
 
 ## Seed 0 — Wall Playground
 
-Preamble contains four vertical walls (cols 6, 12, 18, 24) each with a 2-tile-high
-gap at a different height (rows 3–4, 5–6, 2–3, 4–5). Sections below are normal.
+Preamble: four vertical walls (cols 6, 12, 18, 24) each with a 2-tile-high gap at a
+different height (rows 3–4, 5–6, 2–3, 4–5). Solid floor at row 12 with a centre gap
+(cols 13–16) to descend to the section below.
 
-**Use for:** gap traversal, `_gap_snap` behaviour, SpiralBorer floor phasing,
-collision edge cases.
+Section 0: solid floor with 1-block pillars every 3 columns — verifies `_gap_snap`
+does not auto-climb 1-tile obstacles. Sections 1+ are normal.
+
+**Use for:** gap traversal, `_gap_snap` behaviour, 1-block step collision, SpiralBorer
+floor phasing.
 
 ---
 
