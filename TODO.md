@@ -12,10 +12,6 @@ None yet.
 - Floors / progression (floor counter, difficulty scaling)
 
 ## Worldgen
-- Floor/biome transitions after every N sections
-  - transitioning biomes/floors shows a small center-screen modal like in Castlevania when areas change (no pause).
-  - it doesn't expire, so re-visited areas will keep the same transition effect.
-
 - Difficulty scaling: denser spawns + harder enemies deeper down, but better artifacts.
 
 ## Visuals/Aesthetic

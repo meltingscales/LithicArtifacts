@@ -2,7 +2,7 @@
 
 A tiny roguelike about finding cursed body modifications and breaking yourself in interesting ways.
 
-Inspired by **Caves of Qud**, **Metroid Fusion**, **Downwell**, **the original Rogue**, and **LithicRivers**.
+Inspired by **Caves of Qud**, **Made in Abyss**, **Metroid Fusion**, **Downwell**, **the original Rogue**, and **LithicRivers**.
 
 See [DESIGN-DECISIONS.md](DESIGN-DECISIONS.md) for locked design decisions and rationale.
 
@@ -89,3 +89,4 @@ Early concept. Not yet started.
 | Rogue (1980) | Austerity, random item discovery, permadeath |
 | [LithicRivers](https://github.com/meltingscales/LithicRivers/) | Aesthetic sensibility, terminal-forward thinking |
 | Noita | Rewarding the player for breaking the game |
+| Made in Abyss | Rare artifacts, body horror, monsters |

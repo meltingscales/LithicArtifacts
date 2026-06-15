@@ -21,6 +21,27 @@ YELLOW     = 10
 ORANGE     = 9
 BROWN      = 4
 
+# fmt: off
+BIOME_SECTION_LEN = 6   # dungeon sections per biome
+
+_BIOMES = [
+    # name        bg  wall_fill  wall_brd  cave_fill  cave_brd
+    ("Dungeon",    0,     5,        6,        4,          5),
+    ("Caverns",    1,     5,        6,       13,          1),
+    ("Abyss",      2,    13,        6,        1,         13),
+    ("Depths",     3,     3,       11,        3,          6),
+    ("Inferno",    0,     8,        9,        4,          8),
+]
+# fmt: on
+
+
+def biome_for_row(abs_row):
+    if abs_row < PREAMBLE_ROWS:
+        return 0
+    section_idx = (abs_row - PREAMBLE_ROWS) // SECTION_H
+    return (section_idx // BIOME_SECTION_LEN) % len(_BIOMES)
+
+
 # Pause / body-panel layout
 _CELL  = 13    # body-grid cell pitch (12 px visible + 1 px gap)
 _GX    = 8     # body grid left edge
@@ -269,6 +290,10 @@ class Game:
         self.dead         = False
         self.death_timer  = 0        # counts down from DEATH_HOLD; respawn when 0
         self.immortal     = False    # debug toggle
+        # Biome transition state
+        self.current_biome_idx  = 0
+        self.biome_banner_name  = ""
+        self.biome_banner_timer = 0
         # fmt: on
         pyxel.run(self.update, self.draw)
 
@@ -1076,6 +1101,29 @@ class Game:
         self.cam_y += (target - self.cam_y) * 0.12
         self.cam_y = max(0.0, self.cam_y)
 
+        # Biome transition detection
+        biome_idx = biome_for_row(int(p.bottom // TILE))
+        if biome_idx != self.current_biome_idx:
+            self.current_biome_idx = biome_idx
+            self.biome_banner_name = _BIOMES[biome_idx][0]
+            self.biome_banner_timer = 240
+        elif self.biome_banner_timer > 0:
+            self.biome_banner_timer -= 1
+
+    def _draw_biome_banner(self):
+        name = self.biome_banner_name
+        bw, bh = 120, 26
+        bx = (SCREEN_W - bw) // 2
+        by = (SCREEN_H - bh) // 2
+        brd = _BIOMES[self.current_biome_idx][3]  # wall_brd color
+        pyxel.dither(0.5)
+        pyxel.rect(bx, by, bw, bh, BLACK)
+        pyxel.dither(1.0)
+        pyxel.rectb(bx, by, bw, bh, brd)
+        label = "ENTERING"
+        pyxel.text(bx + (bw - len(label) * 4) // 2, by + 5, label, DARK_GRAY)
+        pyxel.text(bx + (bw - len(name) * 4) // 2, by + 14, name, YELLOW)
+
     def _draw_death(self):
         pyxel.cls(BLACK)
         cx = SCREEN_W // 2
@@ -1092,8 +1140,9 @@ class Game:
             self._draw_pause()
             return
 
-        pyxel.cls(BLACK)
         cam = self.cam_y
+        cam_biome = biome_for_row(int((cam + SCREEN_H * 0.5) // TILE))
+        pyxel.cls(_BIOMES[cam_biome][1])
         first = max(0, int(cam // TILE) - 1)
         last = first + (SCREEN_H // TILE) + 3
 
@@ -1103,12 +1152,13 @@ class Game:
                 if ttype != 0:
                     sx = col * TILE
                     sy = int(row * TILE - cam)
+                    _, _, wf, wb, cf, cb = _BIOMES[biome_for_row(row)]
                     if ttype == 2:  # cave rock
-                        pyxel.rect(sx, sy, TILE, TILE, BROWN)
-                        pyxel.rectb(sx, sy, TILE, TILE, DARK_GRAY)
+                        pyxel.rect(sx, sy, TILE, TILE, cf)
+                        pyxel.rectb(sx, sy, TILE, TILE, cb)
                     else:  # platform / side wall (type 1)
-                        pyxel.rect(sx, sy, TILE, TILE, DARK_GRAY)
-                        pyxel.rectb(sx, sy, TILE, TILE, LIGHT_GRAY)
+                        pyxel.rect(sx, sy, TILE, TILE, wf)
+                        pyxel.rectb(sx, sy, TILE, TILE, wb)
 
         for b in self.bullets:
             b.draw(cam)
@@ -1164,6 +1214,9 @@ class Game:
         for i in range(p.max_hp):
             col = YELLOW if i < p.hp else DARK_GRAY
             pyxel.rect(4 + i * 5, SCREEN_H - 8, 4, 4, col)
+
+        if self.biome_banner_timer > 0:
+            self._draw_biome_banner()
 
         if self.pickup_dialogue is not None:
             self._draw_pickup_dialogue(self.pickup_dialogue)
