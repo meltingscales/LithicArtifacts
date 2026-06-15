@@ -179,13 +179,14 @@ class MechaspiderLegs(Artifact):
 
     def __init__(self):
         # fmt: off
-        self._feet          = [(0.0, 0.0)] * self._N_LEGS
-        self._step_timer    = [0]          * self._N_LEGS
-        self._step_from     = [(0.0, 0.0)] * self._N_LEGS
-        self._step_to       = [(0.0, 0.0)] * self._N_LEGS
-        self._tick          = 0
-        self._wall_side     = 1    # 1=right, -1=left; set on grip
-        self._grip_edge_x   = 0.0  # player edge x at grip start (world coords)
+        self._feet           = [(0.0, 0.0)] * self._N_LEGS
+        self._foot_anchored  = [False]      * self._N_LEGS  # True = on a real tile
+        self._step_timer     = [0]          * self._N_LEGS
+        self._step_from      = [(0.0, 0.0)] * self._N_LEGS
+        self._step_to        = [(0.0, 0.0)] * self._N_LEGS
+        self._tick           = 0
+        self._wall_side      = 1    # 1=right, -1=left; set on grip
+        self._grip_edge_x    = 0.0  # player edge x at grip start; fallback bound
         # fmt: on
 
     # ---- helpers ----
@@ -233,14 +234,22 @@ class MechaspiderLegs(Artifact):
         return best
 
     def _has_wall_grip(self, player):
-        """True if player edge is still within leg reach of the gripped wall.
+        """True if the player is within leg reach of any anchored foot.
 
-        Checks direct pixel distance from the grip edge — immune to ceiling/floor
-        tiles in nearby columns triggering a false positive.
+        As legs step to new tiles those tiles extend the reachable range, letting
+        the player traverse progressively further along rough surfaces.
+        Falls back to initial grip edge when no feet are anchored yet.
         """
         ws = self._wall_side
         edge = player.right if ws == 1 else player.x
-        return abs(edge - self._grip_edge_x) <= self._LEG_REACH * _TILE
+        max_reach = self._LEG_REACH * _TILE
+        for i in range(self._N_LEGS):
+            if self._foot_anchored[i]:
+                fx, _ = self._feet[i]
+                if abs(edge - fx) <= max_reach:
+                    return True
+        # Fallback: within reach of the initial wall
+        return abs(edge - self._grip_edge_x) <= max_reach
 
     def _init_feet(self, player, world):
         self._wall_side = player.wall_contact
@@ -248,7 +257,12 @@ class MechaspiderLegs(Artifact):
         for i in range(self._N_LEGS):
             pref_x, pref_y = self._preferred_foot(player, i)
             anchor = self._find_anchor(player, world, pref_y)
-            self._feet[i] = anchor if anchor else (pref_x, pref_y)
+            if anchor:
+                self._feet[i] = anchor
+                self._foot_anchored[i] = True
+            else:
+                self._feet[i] = (pref_x, pref_y)
+                self._foot_anchored[i] = False
 
     # ---- on_frame ----
 
@@ -292,10 +306,12 @@ class MechaspiderLegs(Artifact):
             foot_dist = math.sqrt((fx - pref_x) ** 2 + (fy - pref_y) ** 2)
             if foot_dist >= self._STEP_DIST:
                 anchor = self._find_anchor(player, world, pref_y)
-                target = anchor if anchor else (pref_x, pref_y)  # hang in air if no tile
+                target = anchor if anchor else (pref_x, pref_y)
                 self._step_from[i] = (fx, fy)
                 self._step_to[i] = target
                 self._step_timer[i] = self._STEP_FRAMES
+                # Update anchored state at step start so grip range extends immediately
+                self._foot_anchored[i] = anchor is not None
 
     # ---- draw ----
 
