@@ -3,9 +3,6 @@
 ## Bugs
 
 <!--None yet.-->
-- Frozen enemy sprites shouldn't be replaced with a glyph, but the same sprite they already have, just tinted blue.
-
-
 
 ## Artifacts
 - Fractal Blaster: piercing shots that trace a constantly-shifting Julia set outline
@@ -38,4 +35,4 @@
 
 ## Core
 
-Pull RNG-related things out into `rng.py` so we can easily tweak them. Things like worldgen, item spawn chances, etc.
+- Pull RNG-related things out into `rng.py` so we can easily tweak them. Things like worldgen, item spawn chances, etc.

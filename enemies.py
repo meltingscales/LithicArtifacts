@@ -94,11 +94,8 @@ class Enemy:
     def draw(self, cam):
         sy = int(self.y - cam)
         if -_TILE <= sy < _SCREEN_H:
-            if self.frozen_timer > 0:
-                pyxel.rect(int(self.x), sy, _TILE, _TILE, 1)       # navy fill
-                pyxel.text(int(self.x) + 2, sy + 1, self.glyph, 12)  # cyan glyph
-            else:
-                pyxel.text(int(self.x) + 2, sy + 1, self.glyph, self.color)
+            col = 12 if self.frozen_timer > 0 else self.color
+            pyxel.text(int(self.x) + 2, sy + 1, self.glyph, col)
 
 
 # ---------------------------------------------------------------------------
@@ -202,15 +199,13 @@ class Flyer(Enemy):
     def draw(self, cam):
         sy = int(self.y - cam)
         if -_TILE <= sy < _SCREEN_H:
+            # Flip horizontally when moving left; sprite is 16×8, centred over 8×8 hitbox
+            w = self._SPR_W if self.vx >= 0 else -self._SPR_W
+            pyxel.blt(int(self.x) - 4, sy, 0, self._SPR_U, self._SPR_V, w, self._SPR_H, 0)
             if self.frozen_timer > 0:
-                pyxel.rect(int(self.x), sy, _TILE, _TILE, 1)
-                pyxel.text(int(self.x) + 2, sy + 1, self.glyph, 12)
-            else:
-                # Flip horizontally when moving left; sprite is 16×8, centred over 8×8 hitbox
-                w = self._SPR_W if self.vx >= 0 else -self._SPR_W
-                pyxel.blt(
-                    int(self.x) - 4, sy, 0, self._SPR_U, self._SPR_V, w, self._SPR_H, 0
-                )
+                pyxel.dither(0.5)
+                pyxel.rect(int(self.x) - 4, sy, 16, self._SPR_H, 1)  # navy dither overlay
+                pyxel.dither(1.0)
 
     def update(self, world, player, enemy_bullets):
         self.t += 1
