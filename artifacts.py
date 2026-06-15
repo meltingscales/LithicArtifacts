@@ -84,6 +84,32 @@ class SpiralBorer(Artifact):
         return not world.solid(lc, br) and not world.solid(rc, br)
 
 
+class MissileArtifact(Artifact):
+    """Base for missile-type subweapons. Tracks ammo; fired via missile mode (hold RB)."""
+
+    # fmt: off
+    ammo     = 0
+    max_ammo = 0
+    # fmt: on
+
+
+class IceMissile(MissileArtifact):
+    """Freezing missiles: 2 damage, freeze 5 s on hit, limited ammo."""
+
+    # fmt: off
+    name        = "Ice Missiles"
+    glyph       = "~"
+    description = ("Fires freezing missiles (hold RB+Z). "
+                   "Hits freeze enemies for 5 s and deal 2 damage. "
+                   "Limited ammo.")
+    MAX_AMMO    = 30
+    # fmt: on
+
+    def __init__(self):
+        self.ammo     = 10
+        self.max_ammo = self.MAX_AMMO
+
+
 class VampiricCape(Artifact):
     """Leave a ghostly afterimage trail while moving; kills have a 1-in-3
     chance to restore 1 HP."""

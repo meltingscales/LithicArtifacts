@@ -8,12 +8,6 @@
 ## Artifacts
 - Fractal Blaster: piercing shots that trace a constantly-shifting Julia set outline
 
-- Ice Missiles: [TBD]
-  - Missile-like weapons have limited ammo, and also can be toggled by holding right bumper, just like in Metroid Fusion
-  - Freezes enemies for 5 seconds if hit
-  - Does 2 damage
-  - In the case that the player has multiple missile types, the subweapon can be switched with SELECT
-  - We should add a missile ammo and missile type UI element next to the health bar.
 
 ## Gameplay
 - Floors / progression (floor counter, difficulty scaling)

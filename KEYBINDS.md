@@ -9,6 +9,8 @@
 | Crouch (toggle) | Down / J | D-pad Down |
 | Shoot | Z | X |
 | Aim lock (hold) | X | LB |
+| Missile mode (hold) | A | RB |
+| Cycle missile type | — | Select |
 | Burrow (while crouching) | C | Y |
 | Body panel | Tab | Start |
 | Quit | Q | — |
@@ -45,3 +47,6 @@ Passive. Your shots destroy solid tiles on impact. Without this artifact, bullet
 
 ### Vampiric Cape
 Passive. Leaves a spectral afterimage trail while moving. Each kill has a 1-in-3 chance to restore 1 HP.
+
+### Ice Missiles
+Subweapon. Hold RB (or A on keyboard) then press Z to fire a freezing missile. Missiles deal 2 damage and freeze the target for 5 s. Limited ammo (starts at 10, max 30). HUD shows `~:XX` to the right of the HP bar; turns yellow in missile mode.

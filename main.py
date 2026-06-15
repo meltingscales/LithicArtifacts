@@ -3,7 +3,7 @@ import pyxel
 import random
 
 # fmt: off
-from artifacts import SpiralBorer, VampiricCape, Wallbreaker
+from artifacts import IceMissile, MissileArtifact, SpiralBorer, VampiricCape, Wallbreaker
 from enemies   import Crawler, Flyer, ShootyFlier, EnemyBullet
 from worldgen  import gen_section, SECTION_H
 # fmt: on
@@ -68,8 +68,8 @@ P_W       = TILE
 P_H       = TILE * 2
 P_HIT_INS = 1       # horizontal inset for floor/ceiling checks; lets player slip into 1-tile gaps
 
-PREAMBLE_ROWS  = 15                          # hardcoded entrance rows; sections begin here
-_ARTIFACT_POOL = [SpiralBorer, VampiricCape, Wallbreaker]  # artifact classes that can appear as world pickups
+PREAMBLE_ROWS  = 15                                              # hardcoded entrance rows; sections begin here
+_ARTIFACT_POOL = [SpiralBorer, VampiricCape, Wallbreaker, IceMissile]  # artifact classes that can appear as world pickups
 # fmt: on
 
 
@@ -178,6 +178,45 @@ class Bullet:
             pyxel.rect(int(self.x), sy, 2, 2, ORANGE)
 
 
+class MissileBullet:
+    LIFETIME      = 120
+    SPEED         = 3.0
+    DAMAGE        = 2
+    FREEZE_FRAMES = 300   # 5 s at 60 fps
+
+    def __init__(self, x, y, dx, dy):
+        mag = math.sqrt(dx * dx + dy * dy) or 1.0
+        # fmt: off
+        self.x               = float(x)
+        self.y               = float(y)
+        self.vx              = dx / mag * self.SPEED
+        self.vy              = dy / mag * self.SPEED
+        self.life            = self.LIFETIME
+        self.alive           = True
+        self.can_break_walls = False
+        # fmt: on
+
+    def update(self, world):
+        self.x += self.vx
+        self.y += self.vy
+        self.life -= 1
+        if self.life <= 0:
+            self.alive = False
+            return
+        col, row = int(self.x // TILE), int(self.y // TILE)
+        if world.solid(col, row):
+            if self.can_break_walls:
+                world.destroy(col, row)
+            self.alive = False
+
+    def draw(self, cam):
+        sy = int(self.y - cam)
+        if 0 <= sy < SCREEN_H:
+            x = int(self.x)
+            pyxel.rect(x, sy, 3, 3, 12)       # cyan body
+            pyxel.pset(x + 1, sy + 1, 7)      # white center pixel
+
+
 class WorldPickup:
     """An artifact resting in the world on a pedestal, waiting to be collected."""
 
@@ -250,6 +289,7 @@ DEBUG_ITEMS = [
     ("Spiral Borer",  SpiralBorer),
     ("Wallbreaker",   Wallbreaker),
     ("Vampiric Cape", VampiricCape),
+    ("Ice Missiles",  IceMissile),
     ("Immortality?",  None),        # None = boolean flag on Game, not an artifact
 ]
 # fmt: on
@@ -267,8 +307,9 @@ class Game:
         # fmt: off
         self.world        = World(seed=42)
         self.player       = Player()
-        self.bullets      = []
-        self.cam_y        = 0.0
+        self.bullets         = []
+        self.missile_bullets = []
+        self.cam_y           = 0.0
         # Pause / body-panel state
         self.body_grid     = [[None] * 5 for _ in range(5)]
         self.inventory     = [SpiralBorer()]   # start with one for testing
@@ -283,6 +324,8 @@ class Game:
         self.inv_cursor   = 0
         self.hover_timer  = 0
         self.hover_key    = None
+        # Missile subweapon state
+        self.active_missile_idx = 0   # index into equipped MissileArtifact list
         # Debug menu state
         self.debug_open   = False
         self.debug_cursor = 0
@@ -665,6 +708,18 @@ class Game:
     def _aim_lock(self):
         return pyxel.btn(pyxel.KEY_X) or pyxel.btn(pyxel.GAMEPAD1_BUTTON_LEFTSHOULDER)
 
+    def _missile_mode(self):
+        return pyxel.btn(pyxel.KEY_A) or pyxel.btn(pyxel.GAMEPAD1_BUTTON_RIGHTSHOULDER)
+
+    def _select_btnp(self):
+        return pyxel.btnp(pyxel.GAMEPAD1_BUTTON_BACK)
+
+    def _active_missile(self):
+        missiles = [a for a in self.player.artifacts if isinstance(a, MissileArtifact)]
+        if not missiles:
+            return None
+        return missiles[self.active_missile_idx % len(missiles)]
+
     # ---- physics ----
 
     def _occupied_rows(self, p):
@@ -786,12 +841,13 @@ class Game:
         p.on_ground  = False
         # fmt: on
         # fmt: off
-        self.enemies       = []
-        self.enemy_bullets = []
-        self.bullets       = []
-        self.cam_y         = 0.0
-        self.dead          = False
-        self.death_timer   = 0
+        self.enemies         = []
+        self.enemy_bullets   = []
+        self.bullets         = []
+        self.missile_bullets = []
+        self.cam_y           = 0.0
+        self.dead            = False
+        self.death_timer     = 0
         # fmt: on
 
     # ---- update / draw ----
@@ -992,19 +1048,36 @@ class Game:
             if p.wall_contact == 0 and not p.burrowing:
                 self._probe_walls(p)
 
+        # Cycle active missile type (SELECT)
+        if self._select_btnp():
+            self.active_missile_idx += 1
+
         # Shoot
         if self._shoot() and p.shoot_cd == 0:
             dx, dy = p.aim_dx, p.aim_dy
             if dx == 0 and dy == 0:
                 dx = p.facing
-            b = Bullet(p.gun_x, p.gun_y, dx, dy)
-            for a in p.artifacts:
-                a.on_shoot(p, b)
-            self.bullets.append(b)
-            p.shoot_cd = SHOOT_COOLDOWN
+            if self._missile_mode():
+                art = self._active_missile()
+                if art and art.ammo > 0:
+                    mb = MissileBullet(p.gun_x, p.gun_y, dx, dy)
+                    for a in p.artifacts:
+                        a.on_shoot(p, mb)
+                    self.missile_bullets.append(mb)
+                    art.ammo -= 1
+                    p.shoot_cd = SHOOT_COOLDOWN
+            else:
+                b = Bullet(p.gun_x, p.gun_y, dx, dy)
+                for a in p.artifacts:
+                    a.on_shoot(p, b)
+                self.bullets.append(b)
+                p.shoot_cd = SHOOT_COOLDOWN
 
         for b in self.bullets:
             b.update(self.world)
+
+        for mb in self.missile_bullets:
+            mb.update(self.world)
 
         # Player bullets vs enemies
         for b in self.bullets:
@@ -1021,7 +1094,24 @@ class Game:
                     b.alive = False
                     break
 
+        # Missile bullets vs enemies — freeze on hit
+        for mb in self.missile_bullets:
+            if not mb.alive:
+                continue
+            for e in self.enemies:
+                if e.alive and (
+                    mb.x < e.right and mb.x + 3 > e.x and mb.y < e.bottom and mb.y + 3 > e.y
+                ):
+                    e.take_damage(MissileBullet.DAMAGE)
+                    e.frozen_timer = MissileBullet.FREEZE_FRAMES
+                    if not e.alive:
+                        for a in p.artifacts:
+                            a.on_kill(p)
+                    mb.alive = False
+                    break
+
         self.bullets = [b for b in self.bullets if b.alive]
+        self.missile_bullets = [mb for mb in self.missile_bullets if mb.alive]
 
         # Drain world spawn queue
         for sx, sy, etype in self.world.pending_spawns:
@@ -1037,10 +1127,13 @@ class Game:
                     pyxel.play(0, 0)
         self.world.pending_spawns.clear()
 
-        # Update enemies
+        # Update enemies (frozen enemies skip AI/movement)
         for e in self.enemies:
             if e.alive:
-                e.update(self.world, p, self.enemy_bullets)
+                if e.frozen_timer > 0:
+                    e.frozen_timer -= 1
+                else:
+                    e.update(self.world, p, self.enemy_bullets)
 
         # Update enemy bullets
         for eb in self.enemy_bullets:
@@ -1092,6 +1185,9 @@ class Game:
         self.enemies = [e for e in self.enemies if e.alive and e.y > cull_y]
         self.enemy_bullets = [
             eb for eb in self.enemy_bullets if eb.alive and eb.y > cull_y
+        ]
+        self.missile_bullets = [
+            mb for mb in self.missile_bullets if mb.alive and mb.y > cull_y
         ]
         self.world.pickups = [
             pu for pu in self.world.pickups if not pu.collected and pu.y > cull_y
@@ -1170,6 +1266,9 @@ class Game:
         for b in self.bullets:
             b.draw(cam)
 
+        for mb in self.missile_bullets:
+            mb.draw(cam)
+
         for eb in self.enemy_bullets:
             eb.draw(cam)
 
@@ -1221,6 +1320,13 @@ class Game:
         for i in range(p.max_hp):
             col = YELLOW if i < p.hp else DARK_GRAY
             pyxel.rect(4 + i * 5, SCREEN_H - 8, 4, 4, col)
+
+        # Missile HUD — shown when a missile artifact is equipped
+        art = self._active_missile()
+        if art is not None:
+            hud_col = YELLOW if self._missile_mode() else 12  # yellow when active
+            hud_x = 4 + p.max_hp * 5 + 6
+            pyxel.text(hud_x, SCREEN_H - 8, f"{art.glyph}:{art.ammo:02d}", hud_col)
 
         if self.biome_banner_timer > 0:
             self._draw_biome_banner()

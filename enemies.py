@@ -73,6 +73,7 @@ class Enemy:
         self.hp = hp
         self.damage = damage
         self.alive = True
+        self.frozen_timer = 0
 
     @property
     def right(self):
@@ -93,7 +94,8 @@ class Enemy:
     def draw(self, cam):
         sy = int(self.y - cam)
         if -_TILE <= sy < _SCREEN_H:
-            pyxel.text(int(self.x) + 2, sy + 1, self.glyph, self.color)
+            col = 12 if self.frozen_timer > 0 else self.color  # cyan when frozen
+            pyxel.text(int(self.x) + 2, sy + 1, self.glyph, col)
 
 
 # ---------------------------------------------------------------------------
