@@ -2,7 +2,9 @@
 
 ## Bugs
 
-None yet.
+<!--None yet.-->
+
+It's possible for the player to get stuck if they go into a cave that's deep but has no exit. How can we update our worldgen search-tree algorithm to account for this and reject caves that would soft-lock the player?
 
 ## Artifacts
 - Fractal Blaster: piercing shots that trace a constantly-shifting Julia set outline
@@ -26,10 +28,15 @@ None yet.
 ## Other
 - Make sure assets/ is included in .spec file
 
+- Seeded runs with seed visible in pause menu
+  - we should also seed all RNG with an int
+  - by default, it's `314159`
+
 ## Later
 - Set up pyinstaller release for Steam distribution
   - For a working example, see CICD and scripts in ~/Git/LithicRivers.
 
+- Question: Should we make these python scripts into their own module in `./lithicartifacts/`?
 
 ## Core
 
