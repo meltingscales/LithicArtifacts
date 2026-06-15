@@ -3,7 +3,7 @@ import pyxel
 import random
 
 # fmt: off
-from artifacts import FractalBlaster, IceMissile, MissileArtifact, SpiralBorer, VampiricCape, Wallbreaker
+from artifacts import FractalBlaster, IceMissile, MechaspiderLegs, MissileArtifact, SpiralBorer, VampiricCape, Wallbreaker
 from enemies   import Crawler, Flyer, ShootyFlier, EnemyBullet
 from worldgen  import gen_section
 from synergies import fractal_wallbreaker_active, fractal_wallbreaker_pairs
@@ -14,6 +14,7 @@ from constants import (
     JUMP_VEL, JUMP_VEL_MIN, WALL_JUMP_VEL, WALL_JUMP_HVX, WALL_JUMP_CD,
     BULLET_SPEED, SHOOT_COOLDOWN, DEATH_HOLD,
     P_HIT_INS, CANISTER_DROP_CHANCE, SYNERGY_WALL_BREAK_CHANCE,
+    CLIMB_SPEED,
     DEFAULT_SEED, SEED_WALLS, SEED_EMPTY, SEED_GAUNTLET,
 )
 # fmt: on
@@ -64,6 +65,7 @@ _ARTIFACT_POOL = [
     Wallbreaker,
     IceMissile,
     FractalBlaster,
+    MechaspiderLegs,
 ]  # artifact classes that can appear as world pickups
 # fmt: on
 
@@ -485,6 +487,7 @@ class Player:
         self.ledge_cd     = 0
         self.burrowing    = False
         self.crouching    = False
+        self.climbing     = False
         self.artifacts    = []
         self.hp           = 10
         self.max_hp       = 10
@@ -515,6 +518,7 @@ DEBUG_ITEMS = [
     ("Vampiric Cape",        VampiricCape),
     ("Ice Missiles",         IceMissile),
     ("Fractal Blaster",      FractalBlaster),
+    ("Mechaspider Legs",     MechaspiderLegs),
     ("Immortality?",         None),             # None  = boolean flag, not artifact
     # ---- seed restarts (see SPECIAL-SEEDS.md) ----
     ("Restart [0] walls",    _Restart(0)),
@@ -1181,6 +1185,7 @@ class Game:
         p.state      = "normal"
         p.crouching  = False
         p.burrowing  = False
+        p.climbing   = False
         p.on_ground  = False
         # fmt: on
         # fmt: off
@@ -1291,6 +1296,24 @@ class Game:
                     p.state = "normal"
                     p.ledge_cd = 6
                     p.vy = 0.5
+        elif p.climbing:
+            # MechaspiderLegs wall-climb: vertical movement, no gravity
+            p.aim_dx = p.facing
+            p.aim_dy = 0
+            if jump:
+                # Jump away from wall
+                p.climbing = False
+                p.vy = WALL_JUMP_VEL
+                p.vx = -p.wall_contact * WALL_JUMP_HVX
+                p.jump_type = "spin"
+            else:
+                climb_dy = (-1 if self._up() else 0) + (1 if self._down() else 0)
+                p.vy = climb_dy * CLIMB_SPEED
+                p.vx = 0.0
+                self._move_y(p)
+                self._probe_walls(p)
+                if p.on_ground:
+                    p.climbing = False
         else:
             p.aim_locked = self._aim_lock()
 
@@ -1693,12 +1716,21 @@ class Game:
                 a.draw_trail(cam)
                 break
 
+        # MechaspiderLegs: draw procedural legs behind player
+        for a in p.artifacts:
+            if isinstance(a, MechaspiderLegs):
+                a.draw_legs(p, cam)
+                break
+
         # Blink player during invincibility frames
         if p.inv_cd > 0 and (pyxel.frame_count // 4) % 2:
             pass  # skip draw this frame
         elif p.state == "hanging":
             pyxel.text(px + 2, py + 1, "@", YELLOW)
             pyxel.text(px + 2, py + TILE + 1, "n", YELLOW)
+        elif p.climbing:
+            pyxel.text(px + 2, py + 1, "@", YELLOW)
+            pyxel.text(px + 2, py + TILE + 1, "H", YELLOW)
         elif p.crouching:
             pyxel.text(px + 2, py + 1, "@", YELLOW)
         elif p.burrowing:

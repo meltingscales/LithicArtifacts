@@ -16,6 +16,8 @@ import pyxel
 from constants import TILE as _TILE, SCREEN_H as _SCREEN_H, ICE_MISSILE_MAX_AMMO
 # fmt: on
 
+_P_H = _TILE * 2   # player height in pixels (2 tiles)
+
 
 class Artifact:
     # fmt: off
@@ -156,6 +158,150 @@ class VampiricCape(Artifact):
                 col = self._TRAIL_COLORS[min(i, len(self._TRAIL_COLORS) - 1)]
                 pyxel.text(int(tx) + 2, sy + 1, "@", col)
                 pyxel.text(int(tx) + 2, sy + _TILE + 1, "W", col)
+
+
+class MechaspiderLegs(Artifact):
+    """Eight mechanical legs that grip vertical walls, letting the player crawl up or down."""
+
+    # fmt: off
+    name        = "Mechaspider Legs"
+    glyph       = "M"
+    description = "Eight mechanical legs sprout from your sides. Walls become footholds."
+    # fmt: on
+
+    # fmt: off
+    _N_LEGS     = 8
+    _LEG_REACH  = 3   # tile rows searched above/below preferred height
+    _STEP_DIST  = 5   # px displacement before a foot replants
+    _STEP_FRAMES = 10  # frames to complete one step animation
+    # fmt: on
+
+    def __init__(self):
+        # fmt: off
+        self._feet       = [(0.0, 0.0)] * self._N_LEGS   # world-space foot positions
+        self._step_timer = [0]          * self._N_LEGS   # >0 = foot in mid-step
+        self._step_from  = [(0.0, 0.0)] * self._N_LEGS
+        self._step_to    = [(0.0, 0.0)] * self._N_LEGS
+        self._tick       = 0
+        self._initialized = False
+        # fmt: on
+
+    # ---- helpers ----
+
+    def _wall_col(self, player):
+        if player.wall_contact == 1:
+            return int(player.right // _TILE)
+        return int(player.x // _TILE) - 1
+
+    def _preferred_y(self, player, i):
+        """World-space Y for leg i's shoulder, spread across player height ±4 px."""
+        return player.y + (i / (self._N_LEGS - 1)) * (_P_H + 8) - 4
+
+    def _find_anchor(self, player, world, preferred_y):
+        """Return (fx, fy) world coords of nearest solid tile on the wall column."""
+        wc = self._wall_col(player)
+        prow = int(preferred_y // _TILE)
+        for dr in range(self._LEG_REACH + 1):
+            for sign in (0, -1, 1):
+                r = prow + sign * dr
+                if world.solid(wc, r):
+                    # Foot touches the edge of the tile facing the player
+                    fx = float(wc * _TILE) if player.wall_contact == 1 else float((wc + 1) * _TILE)
+                    fy = r * _TILE + _TILE * 0.5
+                    return fx, fy
+        return None
+
+    def _init_feet(self, player, world):
+        for i in range(self._N_LEGS):
+            py = self._preferred_y(player, i)
+            anchor = self._find_anchor(player, world, py)
+            if anchor:
+                self._feet[i] = anchor
+            else:
+                # Fall back: foot at body edge
+                bx = float(player.x + _TILE) if player.wall_contact == 1 else float(player.x)
+                self._feet[i] = (bx, py)
+        self._initialized = True
+
+    # ---- on_frame ----
+
+    def _has_any_anchor(self, player, world):
+        """True if at least one leg can reach a solid tile."""
+        for i in range(self._N_LEGS):
+            py = self._preferred_y(player, i)
+            if self._find_anchor(player, world, py) is not None:
+                return True
+        return False
+
+    def on_frame(self, player, world, inputs):
+        self._tick += 1
+
+        # Activate climbing: pressing into a wall while airborne
+        if not player.climbing and player.wall_contact != 0 and not player.on_ground:
+            wd = player.wall_contact
+            pressing = (wd == 1 and inputs["right"]) or (wd == -1 and inputs["left"])
+            if pressing:
+                player.climbing = True
+                self._init_feet(player, world)
+
+        if player.climbing:
+            self._update_feet(player, world)
+            # Drop off if no leg can grip anything
+            if not self._has_any_anchor(player, world):
+                player.climbing = False
+
+    def _update_feet(self, player, world):
+        for i in range(self._N_LEGS):
+            # Mid-step: interpolate from old to new anchor
+            if self._step_timer[i] > 0:
+                self._step_timer[i] -= 1
+                t = 1.0 - self._step_timer[i] / self._STEP_FRAMES
+                fx0, fy0 = self._step_from[i]
+                fx1, fy1 = self._step_to[i]
+                # Arc the foot away from the wall during mid-step
+                arc = math.sin(t * math.pi) * 3
+                wall_out = -1 if player.wall_contact == 1 else 1
+                self._feet[i] = (
+                    fx0 + (fx1 - fx0) * t + arc * wall_out,
+                    fy0 + (fy1 - fy0) * t,
+                )
+                continue
+
+            py = self._preferred_y(player, i)
+            fx, fy = self._feet[i]
+            # Replant if foot drifted too far from preferred height
+            if abs(fy - py) > self._STEP_DIST:
+                anchor = self._find_anchor(player, world, py)
+                if anchor and anchor != (fx, fy):
+                    self._step_from[i] = (fx, fy)
+                    self._step_to[i] = anchor
+                    self._step_timer[i] = self._STEP_FRAMES
+
+    # ---- draw ----
+
+    def draw_legs(self, player, cam):
+        if not player.climbing:
+            return
+        # fmt: off
+        _LEG_COLS = (5, 13, 5, 13, 5, 13, 5, 13)   # alternating dark-gray / dark-blue
+        # fmt: on
+        for i in range(self._N_LEGS):
+            # Shoulder: body edge at leg's preferred height
+            sy_world = self._preferred_y(player, i)
+            if player.wall_contact == 1:
+                sx = int(player.x + _TILE - 1)
+            else:
+                sx = int(player.x + 1)
+            sy = int(sy_world - cam)
+
+            fx, fy = self._feet[i]
+            fsx = int(fx)
+            fsy = int(fy - cam)
+
+            col = _LEG_COLS[i]
+            pyxel.line(sx, sy, fsx, fsy, col)
+            # Tiny dot at foot
+            pyxel.pset(fsx, fsy, 6)
 
 
 class FractalBlaster(Artifact):

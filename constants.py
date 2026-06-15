@@ -78,6 +78,7 @@ SYNERGY_WALL_BREAK_CHANCE = 0.10   # FractalBullet+Wallbreaker: chance to break 
 
 # ---- Artifacts --------------------------------------------------------
 ICE_MISSILE_MAX_AMMO = 30
+CLIMB_SPEED          = 1.5   # px/frame vertical speed while wall-climbing
 
 # ---- Seeds ------------------------------------------------------------
 # fmt: off

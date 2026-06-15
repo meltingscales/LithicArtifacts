@@ -1,5 +1,7 @@
 # Done
 
+- Mechaspider Legs artifact: press into wall while airborne to grip; 8 procedural legs anchor to wall tiles with spring-step animation; climb up/down freely while any leg can reach a block; jump to launch away
+
 - PyInstaller spec: added assets/ datas, collect_all for noise (C ext) and numpy; justfile gets clean/rebuild recipes; build/ dist/ added to .gitignore
 
 - Variable jump height: release jump early clamps vy to JUMP_VEL_MIN (-1.5); full jump is JUMP_VEL (-4.5)
