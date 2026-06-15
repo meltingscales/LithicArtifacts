@@ -24,9 +24,13 @@ None yet.
 Mechaspider legs
 - Spidertron climbing legs
 - Anchor or traverse blocks
+- Can be overridden with jump/doublejump/flight
 - Similar animation to factorio spidertron 
 - Procedurally generated climbing animation with eight legs 
 
+
+Long jump
+- Doubles jump height, just like in metroid
 
 Jump sphere
 - Simple double jump
