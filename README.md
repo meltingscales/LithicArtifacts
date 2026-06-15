@@ -10,6 +10,8 @@ See [KEYBINDS.md](KEYBINDS.md) for all keyboard and gamepad bindings.
 
 See [ART-DIRECTION.md](ART-DIRECTION.md) for the art direction and style guide, and `./art-direction` for inspiration in the form of images.
 
+![](./game.png)
+
 ---
 
 ## Concept

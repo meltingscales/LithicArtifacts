@@ -21,6 +21,10 @@ Keep somewhat vague. Just enough for the player to guess what it does without sp
 
 "A spectral cape that drinks the life from fallen foes." is preferred over "A cape that has a chance to heal 1/3 times per kill. Leaves a spectral trail".
 
+## Synergies
+
+These are not documented intentionally. Keep it as brief as possible so the player gets to discover these on their own.
+
 ## Reusable prompts (for user)
 
 ### Questions
