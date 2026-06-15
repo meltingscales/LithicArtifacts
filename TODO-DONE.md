@@ -1,5 +1,7 @@
 # Done
 
+- Variable jump height: release jump early clamps vy to JUMP_VEL_MIN (-1.5); full jump is JUMP_VEL (-4.5)
+
 - Refactor: gameplay constants extracted to `constants.py`; all mirror defs and inline magic numbers replaced across main.py, worldgen.py, enemies.py, artifacts.py
 
 - Refactor: synergy detection extracted to `synergies.py`; `fractal_wallbreaker_pairs/active(body_grid)` replace duplicated adjacency loops in main.py

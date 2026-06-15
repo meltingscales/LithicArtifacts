@@ -11,7 +11,7 @@ from constants import (
     SCREEN_W, SCREEN_H, TILE, COLS,
     PREAMBLE_ROWS, SECTION_H, BIOME_SECTION_LEN,
     GRAVITY, MAX_FALL, MOVE_SPEED,
-    JUMP_VEL, WALL_JUMP_VEL, WALL_JUMP_HVX, WALL_JUMP_CD,
+    JUMP_VEL, JUMP_VEL_MIN, WALL_JUMP_VEL, WALL_JUMP_HVX, WALL_JUMP_CD,
     BULLET_SPEED, SHOOT_COOLDOWN, DEATH_HOLD,
     P_HIT_INS, CANISTER_DROP_CHANCE, SYNERGY_WALL_BREAK_CHANCE,
     DEFAULT_SEED, SEED_WALLS, SEED_EMPTY, SEED_GAUNTLET,
@@ -984,6 +984,15 @@ class Game:
             or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_B)
         )
 
+    def _jump_held(self):
+        return (
+            pyxel.btn(pyxel.KEY_SPACE)
+            or pyxel.btn(pyxel.KEY_UP)
+            or pyxel.btn(pyxel.KEY_K)
+            or pyxel.btn(pyxel.GAMEPAD1_BUTTON_A)
+            or pyxel.btn(pyxel.GAMEPAD1_BUTTON_B)
+        )
+
     def _shoot(self):
         return pyxel.btn(pyxel.KEY_Z) or pyxel.btn(pyxel.GAMEPAD1_BUTTON_X)
 
@@ -1377,6 +1386,9 @@ class Game:
                         else:
                             p.wj_cd_r = WALL_JUMP_CD
 
+            # Variable jump height: release jump early to cut the rise
+            if p.vy < JUMP_VEL_MIN and not self._jump_held():
+                p.vy = JUMP_VEL_MIN
             p.vy = min(p.vy + GRAVITY, MAX_FALL)
             self._move_x(p)
             self._move_y(p)

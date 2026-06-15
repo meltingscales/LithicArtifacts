@@ -2,13 +2,11 @@
 
 ## Bugs
 
-<!--None yet.-->
-
+None yet.
 
 ## Gameplay
 - Floors / progression (floor counter, difficulty scaling)
 
-- Jumping should be able to be partial, based on how long the jump button is held down.
 
 ## Worldgen
 - Difficulty scaling: denser spawns + harder enemies deeper down, but better artifacts.
@@ -39,14 +37,17 @@ Viv Wings
 
 
 ## Other
-- Make sure assets/ is included in .spec file
 
+None yet.
 
 ## Later
 - Set up pyinstaller release for Steam distribution
-  - For a working example, see CICD and scripts in ~/Git/LithicRivers.
+  - Make sure assets/ is included in .spec file
   - Question: Should we make these python scripts into their own module in a folder called `./lithicartifacts/`? (No, do this later when packaging for pyinstaller)
 
+
+- Set up steam packaging and GitHub CICD
+  - For a working example, see CICD and scripts in ~/Git/LithicRivers.
+
+
 ## Core/Architecture
-
-
