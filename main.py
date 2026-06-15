@@ -299,9 +299,9 @@ class FractalBullet:
                     base = random.uniform(0, math.tau)
                     for i in range(2):
                         angle = base + i * math.pi + random.uniform(-0.5, 0.5)
-                        s = FractalBulletSmall(self.x, self.y, angle)
-                        s.synergy_wall_break = self.synergy_wall_break
-                        self.pending_splinters.append(s)
+                        self.pending_splinters.append(
+                            FractalBulletSmall(self.x, self.y, angle)
+                        )
             else:
                 c, s = math.cos(self._jitter), math.sin(self._jitter)
                 jx = (ddx * c - ddy * s) / dist * self.SPEED
@@ -342,11 +342,10 @@ class FractalBulletSmall:
         self.y           = float(y)
         self._vx         = math.cos(angle) * self.SPEED
         self._vy         = math.sin(angle) * self.SPEED
-        self.life               = self.LIFETIME
-        self.alive              = True
-        self.piercing           = True
-        self.hit_enemies: set   = set()
-        self.synergy_wall_break = False
+        self.life             = self.LIFETIME
+        self.alive            = True
+        self.piercing         = True
+        self.hit_enemies: set = set()
         # fmt: on
 
     def update(self, world):
@@ -355,11 +354,7 @@ class FractalBulletSmall:
         self.life -= 1
         if self.life <= 0:
             self.alive = False
-        # Pierces terrain — passes through walls; synergy may destroy them
-        if self.synergy_wall_break:
-            col, row = int(self.x // TILE), int(self.y // TILE)
-            if world.solid(col, row) and random.random() < 0.10:
-                world.destroy(col, row)
+        # Pierces terrain — never destroys walls
 
     def draw(self, cam):
         sy = int(self.y - cam)
