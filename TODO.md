@@ -13,7 +13,7 @@
   - Freezes enemies for 5 seconds if hit
   - Does 2 damage
   - In the case that the player has multiple missile types, the subweapon can be switched with SELECT
-  - We should add a missile ammo and type UI element next to the health bar.
+  - We should add a missile ammo and missile type UI element next to the health bar.
 
 ## Gameplay
 - Floors / progression (floor counter, difficulty scaling)
