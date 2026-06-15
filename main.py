@@ -71,6 +71,7 @@ P_HIT_INS = (
 )
 
 PREAMBLE_ROWS = 15  # hardcoded entrance rows; sections begin here
+DEFAULT_SEED  = 314159  # default run seed; shown in pause menu
 _ARTIFACT_POOL = [
     SpiralBorer,
     VampiricCape,
@@ -82,8 +83,9 @@ _ARTIFACT_POOL = [
 
 
 class World:
-    def __init__(self, seed=0):
+    def __init__(self, seed=DEFAULT_SEED):
         # fmt: off
+        self.seed           = seed
         self.tiles          = {}
         self.rng            = random.Random(seed)
         self.pending_spawns = []   # [(px_x, px_y, type_str)] drained by Game each frame
@@ -102,11 +104,21 @@ class World:
             self.tiles[(0, y)]          = 1
             self.tiles[(COLS - 1, y)]   = 1
             # fmt: on
-        gap = self.rng.randint(5, COLS - 10)
-        for x in range(1, COLS - 1):  # first platform at row 8
-            if not (gap <= x < gap + 5):
-                self.tiles[(x, 8)] = 1
 
+        if seed == 0:
+            # Wall playground: 4 vertical walls with 2-tile-high gaps at
+            # different heights — tests gap traversal and SpiralBorer phasing.
+            # fmt: off
+            for wall_x, gap_top in ((6, 3), (12, 5), (18, 2), (24, 4)):
+                for r in range(1, PREAMBLE_ROWS):
+                    if not (gap_top <= r < gap_top + 2):
+                        self.tiles[(wall_x, r)] = 1
+            # fmt: on
+        else:
+            gap = self.rng.randint(5, COLS - 10)
+            for x in range(1, COLS - 1):  # first platform at row 8
+                if not (gap <= x < gap + 5):
+                    self.tiles[(x, 8)] = 1
 
         # Pre-generate several sections so the player never hits a blank wall
         self._gen_up_to(4)
@@ -128,6 +140,18 @@ class World:
             tiles, spawns, pickup_spec, fl, fr = gen_section(
                 self.rng, abs_start, self._free_l, self._free_r, art_cls
             )
+            # Special-seed overrides (see SPECIAL-SEEDS.md)
+            if self.seed == 1:   # empty world — strip interior tiles + spawns
+                tiles  = {k: v for k, v in tiles.items() if k[0] in (0, COLS - 1)}
+                spawns = []
+            elif self.seed == 2:  # gauntlet — guarantee all enemy types per section
+                mid_r = abs_start + SECTION_H // 2
+                cx    = (fl + fr) // 2  # fmt: skip
+                spawns += [
+                    (cx * TILE,                          (mid_r - 5) * TILE, "flyer"),
+                    (min(COLS - 2, cx + 5) * TILE,      (mid_r - 5) * TILE, "shooty_flier"),
+                    (max(1,        cx - 5) * TILE,       (mid_r - 1) * TILE, "crawler"),
+                ]
             self.tiles.update(tiles)
             self.pending_spawns.extend(spawns)
             if pickup_spec is not None:
@@ -472,14 +496,24 @@ class Player:
     # fmt: on
 
 
+class _Restart:
+    """Sentinel for debug-menu entries that trigger a full game reset."""
+    def __init__(self, seed): self.seed = seed
+
+
 # fmt: off
 DEBUG_ITEMS = [
-    ("Spiral Borer",     SpiralBorer),
-    ("Wallbreaker",      Wallbreaker),
-    ("Vampiric Cape",    VampiricCape),
-    ("Ice Missiles",     IceMissile),
-    ("Fractal Blaster",  FractalBlaster),
-    ("Immortality?",     None),        # None = boolean flag on Game, not an artifact
+    ("Spiral Borer",         SpiralBorer),
+    ("Wallbreaker",          Wallbreaker),
+    ("Vampiric Cape",        VampiricCape),
+    ("Ice Missiles",         IceMissile),
+    ("Fractal Blaster",      FractalBlaster),
+    ("Immortality?",         None),             # None  = boolean flag, not artifact
+    # ---- seed restarts (see SPECIAL-SEEDS.md) ----
+    ("Restart [0] walls",    _Restart(0)),
+    ("Restart [1] empty",    _Restart(1)),
+    ("Restart [2] gauntlet", _Restart(2)),
+    ("Restart [default]",    _Restart(DEFAULT_SEED)),
 ]
 # fmt: on
 
@@ -493,44 +527,53 @@ class Game:
         pyxel.sounds[0].set("e3d3c3", "t", "543", "nnn", 10)
         # Sound 1: flyer shoot (noise burst with fadeout)
         pyxel.sounds[1].set("a4", "n", "7", "f", 5)
-        # fmt: off
-        self.world        = World(seed=42)
-        self.player       = Player()
-        self.bullets         = []
-        self.missile_bullets = []
-        self.canisters       = []
-        self.cam_y           = 0.0
-        # Pause / body-panel state
-        self.body_grid     = [[None] * 5 for _ in range(5)]
-        self.inventory     = [SpiralBorer()]   # start with one for testing
-        self.enemies       = []
-        self.enemy_bullets = []
-        self.held         = None              # artifact currently being moved
-        self.held_src     = None              # ("body", r, c) | ("inv", i)
-        self.paused           = False
-        self.pickup_dialogue  = None          # ArtifactClass while pickup dialogue is open
-        self.pause_panel  = 0                 # 0 = body, 1 = inventory
-        self.body_cursor  = [0, 0]            # [row, col]
-        self.inv_cursor   = 0
-        self.hover_timer  = 0
-        self.hover_key    = None
-        # Missile subweapon state
-        self.active_missile_idx = 0   # index into equipped MissileArtifact list
-        # Debug menu state
-        self.debug_open   = False
-        self.debug_cursor = 0
-        # Death / respawn state
-        self.dead         = False
-        self.death_timer  = 0        # counts down from DEATH_HOLD; respawn when 0
-        self.immortal     = False    # debug toggle
-        # Biome transition state
-        self.current_biome_idx  = 0
-        self.biome_banner_idx   = 0   # biome of the currently displayed banner
-        self.biome_banner_name  = ""
-        self.biome_banner_timer = 0
-        self.biome_trigger_cd   = 0   # cooldown between banner triggers (5 s)
-        # fmt: on
+        # Declare attributes before _full_reset so they always exist
+        self.seed = DEFAULT_SEED
+        self.player = Player()
+        self._full_reset(DEFAULT_SEED)
         pyxel.run(self.update, self.draw)
+
+    def _full_reset(self, seed=DEFAULT_SEED):
+        """Full game reset with a new seed: new world, fresh player, cleared state."""
+        self.seed = seed
+        random.seed(seed)
+        # fmt: off
+        self.world               = World(seed=seed)
+        self.player              = Player()
+        self.bullets             = []
+        self.missile_bullets     = []
+        self.canisters           = []
+        self.cam_y               = 0.0
+        # Pause / body-panel state
+        self.body_grid           = [[None] * 5 for _ in range(5)]
+        self.inventory           = []
+        self.enemies             = []
+        self.enemy_bullets       = []
+        self.held                = None       # artifact being moved
+        self.held_src            = None       # ("body", r, c) | ("inv", i)
+        self.paused              = False
+        self.pickup_dialogue     = None
+        self.pause_panel         = 0          # 0 = body, 1 = inventory
+        self.body_cursor         = [0, 0]
+        self.inv_cursor          = 0
+        self.hover_timer         = 0
+        self.hover_key           = None
+        # Missile subweapon state
+        self.active_missile_idx  = 0
+        # Debug menu state
+        self.debug_open          = False
+        self.debug_cursor        = 0
+        # Death / respawn state
+        self.dead                = False
+        self.death_timer         = 0
+        self.immortal            = False
+        # Biome transition state
+        self.current_biome_idx   = 0
+        self.biome_banner_idx    = 0
+        self.biome_banner_name   = ""
+        self.biome_banner_timer  = 0
+        self.biome_trigger_cd    = 0
+        # fmt: on
 
     # ---- debug menu ----
 
@@ -554,7 +597,10 @@ class Game:
             or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_A)
         ):
             _, cls = DEBUG_ITEMS[self.debug_cursor]
-            if cls is None:
+            if isinstance(cls, _Restart):
+                self._full_reset(cls.seed)
+                return  # debug_open cleared by _full_reset
+            elif cls is None:
                 self.immortal = not self.immortal
             else:
                 inv_hit = next((a for a in self.inventory if isinstance(a, cls)), None)
@@ -594,6 +640,11 @@ class Game:
         pyxel.text(px0 + 4, py0 + 4, "-- DEBUG --", YELLOW)
         pyxel.text(px0 + 60, py0 + 4, "Z/A:toggle  Esc/B:close", DARK_GRAY)
         for i, (label, cls) in enumerate(DEBUG_ITEMS):
+            cursor = ">" if i == self.debug_cursor else " "
+            color  = YELLOW if i == self.debug_cursor else LIGHT_GRAY
+            if isinstance(cls, _Restart):
+                pyxel.text(px0 + 4, py0 + 14 + i * 10, f"{cursor} >>  {label}", color)
+                continue
             if cls is None:
                 has = self.immortal
             else:
@@ -604,8 +655,6 @@ class Game:
                     if self.body_grid[r][c] is not None
                 )
             marker = "[x]" if has else "[ ]"
-            cursor = ">" if i == self.debug_cursor else " "
-            color = YELLOW if i == self.debug_cursor else LIGHT_GRAY
             pyxel.text(px0 + 4, py0 + 14 + i * 10, f"{cursor} {marker} {label}", color)
 
     # ---- pause / body panel ----
@@ -824,6 +873,7 @@ class Game:
         pyxel.text(_GX, 4, "BODY", bc)
         pyxel.text(_IX, 4, "INVENTORY", ic)
         pyxel.text(170, 4, "TAB:switch Esc:close", DARK_GRAY)
+        pyxel.text(4, SCREEN_H - 8, f"seed:{self.seed}", DARK_GRAY)
 
         # Body grid
         for r in range(5):

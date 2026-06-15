@@ -1,5 +1,7 @@
 # Done
 
+- Seeded runs: DEFAULT_SEED=314159, seed shown in pause menu, F1→Restart[N] for full reset; special seeds 0 (wall playground), 1 (empty), 2 (gauntlet); SPECIAL-SEEDS.md created
+
 - Bug: player couldn't pass 2-tile-high wall gaps — fixed `_occupied_rows` to use tile-row arithmetic (no float drift) + `_gap_snap` for airborne alignment assist
 
 - Bug: cave soft-lock — two-pass BFS in `_is_traversable`: pass 1 collects all reachable states, pass 2 verifies every grounded reachable state can reach the section bottom; rejects side-pocket traps
