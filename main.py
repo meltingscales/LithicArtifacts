@@ -244,6 +244,47 @@ class WorldPickup:
         pyxel.text(int(self.x) + 2, sy + 1, self.artifact_cls.glyph, YELLOW)
 
 
+class MissileCanister:
+    """Dropped by enemies (1/5 chance); refills 5 ammo to least-full missile artifact."""
+
+    # fmt: off
+    LIFETIME    = 600   # 10 s at 60 fps
+    BLINK_START = 180   # blink during last 3 s
+    BLINK_RATE  = 6     # frames per on/off half-cycle
+    AMMO_AMOUNT = 5
+    # fmt: on
+
+    def __init__(self, x, y):
+        # fmt: off
+        self.x     = float(x)
+        self.y     = float(y)
+        self.timer = self.LIFETIME
+        self.alive = True
+        # fmt: on
+
+    # fmt: off
+    @property
+    def right(self):  return self.x + TILE
+    @property
+    def bottom(self): return self.y + TILE
+    # fmt: on
+
+    def update(self):
+        self.timer -= 1
+        if self.timer <= 0:
+            self.alive = False
+
+    def draw(self, cam):
+        sy = int(self.y - cam)
+        if not (-TILE <= sy < SCREEN_H):
+            return
+        if self.timer < self.BLINK_START and (self.timer // self.BLINK_RATE) % 2 == 1:
+            return
+        col = 12 if (pyxel.frame_count // 8) % 2 else 7  # cyan / white pulse
+        pyxel.rectb(int(self.x), sy, TILE, TILE, col)
+        pyxel.text(int(self.x) + 2, sy + 1, "~", col)
+
+
 class Player:
     def __init__(self):
         # fmt: off
@@ -309,6 +350,7 @@ class Game:
         self.player       = Player()
         self.bullets         = []
         self.missile_bullets = []
+        self.canisters       = []
         self.cam_y           = 0.0
         # Pause / body-panel state
         self.body_grid     = [[None] * 5 for _ in range(5)]
@@ -715,6 +757,10 @@ class Game:
     def _select_btnp(self):
         return pyxel.btnp(pyxel.GAMEPAD1_BUTTON_BACK)
 
+    def _maybe_drop_canister(self, e):
+        if random.random() < 0.2:
+            self.canisters.append(MissileCanister(e.x, e.y))
+
     def _active_missile(self):
         missiles = [a for a in self.player.artifacts if isinstance(a, MissileArtifact)]
         if not missiles:
@@ -864,6 +910,7 @@ class Game:
         self.enemy_bullets   = []
         self.bullets         = []
         self.missile_bullets = []
+        self.canisters       = []
         self.cam_y           = 0.0
         self.dead            = False
         self.death_timer     = 0
@@ -1110,6 +1157,7 @@ class Game:
                     if not e.alive:
                         for a in p.artifacts:
                             a.on_kill(p)
+                        self._maybe_drop_canister(e)
                     b.alive = False
                     break
 
@@ -1126,6 +1174,7 @@ class Game:
                     if not e.alive:
                         for a in p.artifacts:
                             a.on_kill(p)
+                        self._maybe_drop_canister(e)
                     mb.alive = False
                     break
 
@@ -1199,6 +1248,20 @@ class Game:
                 self.pickup_dialogue = pu.artifact_cls
                 break
 
+        # Canister update and collection
+        for c in self.canisters:
+            c.update()
+        for c in self.canisters:
+            if c.alive and (
+                p.x < c.right and p.right > c.x and p.y < c.bottom and p.bottom > c.y
+            ):
+                missiles = [a for a in p.artifacts if isinstance(a, MissileArtifact)]
+                if missiles:
+                    target = min(missiles, key=lambda a: a.ammo / a.max_ammo)
+                    target.ammo = min(target.ammo + MissileCanister.AMMO_AMOUNT, target.max_ammo)
+                c.alive = False
+                break
+
         # Cull dead / off-screen-above objects
         cull_y = self.cam_y - SCREEN_H * 3
         self.enemies = [e for e in self.enemies if e.alive and e.y > cull_y]
@@ -1208,6 +1271,7 @@ class Game:
         self.missile_bullets = [
             mb for mb in self.missile_bullets if mb.alive and mb.y > cull_y
         ]
+        self.canisters = [c for c in self.canisters if c.alive and c.y > cull_y]
         self.world.pickups = [
             pu for pu in self.world.pickups if not pu.collected and pu.y > cull_y
         ]
@@ -1296,6 +1360,9 @@ class Game:
 
         for pu in self.world.pickups:
             pu.draw(cam)
+
+        for c in self.canisters:
+            c.draw(cam)
 
         p = self.player
         px = int(p.x)

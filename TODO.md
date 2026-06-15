@@ -13,8 +13,6 @@ None yet.
 ## Gameplay
 - Floors / progression (floor counter, difficulty scaling)
 
-- Enemies sometimes (1/5 chance) drop missile refill canisters (5 missiles for any type of missile that is the least full)
-  - canisters blink within 10 seconds (for 3 seconds), then despawn
 
 - When you pick up an artifact, suggest the player dismiss (already does this) or pause to install their artifact, and allow them to pause.
 
@@ -36,4 +34,4 @@ None yet.
 
 ## Core
 
-- Pull RNG-related things out into `rng.py` so we can easily tweak them. Things like worldgen, item spawn chances, etc.
+- Pull RNG-related things out into CONSTANTS_NAMED_LIKE_THIS in `rng.py` so we can easily tweak them. Things like worldgen, item spawn chances, etc.
