@@ -292,8 +292,10 @@ class Game:
         self.immortal     = False    # debug toggle
         # Biome transition state
         self.current_biome_idx  = 0
+        self.biome_banner_idx   = 0   # biome of the currently displayed banner
         self.biome_banner_name  = ""
         self.biome_banner_timer = 0
+        self.biome_trigger_cd   = 0   # cooldown between banner triggers (5 s)
         # fmt: on
         pyxel.run(self.update, self.draw)
 
@@ -1105,9 +1107,14 @@ class Game:
         biome_idx = biome_for_row(int(p.bottom // TILE))
         if biome_idx != self.current_biome_idx:
             self.current_biome_idx = biome_idx
-            self.biome_banner_name = _BIOMES[biome_idx][0]
-            self.biome_banner_timer = 240
-        elif self.biome_banner_timer > 0:
+            if self.biome_trigger_cd == 0:
+                self.biome_banner_idx   = biome_idx
+                self.biome_banner_name  = _BIOMES[biome_idx][0]
+                self.biome_banner_timer = 240
+                self.biome_trigger_cd   = 300
+        if self.biome_trigger_cd > 0:
+            self.biome_trigger_cd -= 1
+        if self.biome_banner_timer > 0:
             self.biome_banner_timer -= 1
 
     def _draw_biome_banner(self):
@@ -1115,7 +1122,7 @@ class Game:
         bw, bh = 120, 26
         bx = (SCREEN_W - bw) // 2
         by = (SCREEN_H - bh) // 2
-        brd = _BIOMES[self.current_biome_idx][3]  # wall_brd color
+        brd = _BIOMES[self.biome_banner_idx][3]  # wall_brd color
         pyxel.dither(0.5)
         pyxel.rect(bx, by, bw, bh, BLACK)
         pyxel.dither(1.0)
