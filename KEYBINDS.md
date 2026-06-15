@@ -26,12 +26,12 @@
 
 ## Debug Menu (dev only)
 
-| Action | Keyboard |
-|---|---|
-| Open / close | F1 |
-| Navigate | Arrows / k / j |
-| Toggle artifact | Z / Enter |
-| Close | Esc |
+| Action | Keyboard | Gamepad |
+|---|---|---|
+| Open / close | F1 | — |
+| Navigate | Arrows / k / j | D-pad Up/Down |
+| Toggle artifact | Z / Enter | A |
+| Close | Esc | B / Start |
 
 ## Artifacts
 

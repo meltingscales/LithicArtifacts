@@ -248,7 +248,7 @@ class FractalBullet:
         self.hit_enemies: set = set()
         # fmt: on
         self._waypoints = self._build_waypoints(x, y, nx, ny, julia_cache, cam)
-        self._wp_idx    = 0           # fmt: skip
+        self._wp_idx    = 0  # fmt: skip
         self._jitter    = random.uniform(-0.2, 0.2)  # fmt: skip
 
     @staticmethod
@@ -482,11 +482,23 @@ class Game:
 
     def _update_debug(self):
         n = len(DEBUG_ITEMS)
-        if pyxel.btnp(pyxel.KEY_UP) or pyxel.btnp(pyxel.KEY_K):
+        if (
+            pyxel.btnp(pyxel.KEY_UP)
+            or pyxel.btnp(pyxel.KEY_K)
+            or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_DPAD_UP)
+        ):
             self.debug_cursor = (self.debug_cursor - 1) % n
-        if pyxel.btnp(pyxel.KEY_DOWN) or pyxel.btnp(pyxel.KEY_J):
+        if (
+            pyxel.btnp(pyxel.KEY_DOWN)
+            or pyxel.btnp(pyxel.KEY_J)
+            or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_DPAD_DOWN)
+        ):
             self.debug_cursor = (self.debug_cursor + 1) % n
-        if pyxel.btnp(pyxel.KEY_Z) or pyxel.btnp(pyxel.KEY_RETURN):
+        if (
+            pyxel.btnp(pyxel.KEY_Z)
+            or pyxel.btnp(pyxel.KEY_RETURN)
+            or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_A)
+        ):
             _, cls = DEBUG_ITEMS[self.debug_cursor]
             if cls is None:
                 self.immortal = not self.immortal
@@ -509,7 +521,11 @@ class Game:
                     self._sync_artifacts()
                 else:
                     self.inventory.append(cls())
-        if pyxel.btnp(pyxel.KEY_ESCAPE):
+        if (
+            pyxel.btnp(pyxel.KEY_ESCAPE)
+            or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_B)
+            or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_START)
+        ):
             self.debug_open = False
 
     def _draw_debug(self):
@@ -522,7 +538,7 @@ class Game:
         pyxel.rect(px0, py0, pw, ph, BLACK)
         pyxel.rectb(px0, py0, pw, ph, LIGHT_GRAY)
         pyxel.text(px0 + 4, py0 + 4, "-- DEBUG --", YELLOW)
-        pyxel.text(px0 + 60, py0 + 4, "Z:toggle  Esc/F1:close", DARK_GRAY)
+        pyxel.text(px0 + 60, py0 + 4, "Z/A:toggle  Esc/B:close", DARK_GRAY)
         for i, (label, cls) in enumerate(DEBUG_ITEMS):
             if cls is None:
                 has = self.immortal
