@@ -1,5 +1,7 @@
 # Done
 
+- Bug: player couldn't pass 2-tile-high wall gaps — fixed `_occupied_rows` to use tile-row arithmetic (no float drift) + `_gap_snap` for airborne alignment assist
+
 - Bug: cave soft-lock — two-pass BFS in `_is_traversable`: pass 1 collects all reachable states, pass 2 verifies every grounded reachable state can reach the section bottom; rejects side-pocket traps
 - Synergy: FractalBlaster+Wallbreaker adjacent in body grid → FractalBullet/Small get 10% chance to destroy walls while piercing through them; pulsing pink (color 14) dithered line drawn between adjacent pair in body panel
 - FractalBulletSmall splinters: FractalBullet emits 2 pink/red (color 14/8) splinters every 3rd waypoint advance (max 5 events); splinters pierce terrain+enemies, SPEED=2, LIFETIME=50, never break walls

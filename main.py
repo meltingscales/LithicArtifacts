@@ -107,6 +107,7 @@ class World:
             if not (gap <= x < gap + 5):
                 self.tiles[(x, 8)] = 1
 
+
         # Pre-generate several sections so the player never hits a blank wall
         self._gen_up_to(4)
 
@@ -971,7 +972,11 @@ class Game:
     # ---- physics ----
 
     def _occupied_rows(self, p):
-        return range(int(p.y // TILE), int((p.bottom - 1) // TILE) + 1)
+        # Use tile-row arithmetic instead of float bottom so that a 2-tile-high
+        # gap is always passable regardless of sub-pixel y drift during free fall.
+        tr = int(p.y // TILE)
+        ph_rows = 1 if p.crouching else P_H // TILE
+        return range(tr, tr + ph_rows)
 
     def _try_ledge_grab(self, p, wall_col, blocking_row, wall_dir):
         """Grab when bottom tile hits wall but top tile is open."""
@@ -1001,6 +1006,28 @@ class Game:
             return True
         return False
 
+    def _gap_snap(self, p, wall_col):
+        """
+        Nudge p.y by up to GAP_SNAP pixels (upward first) so the player aligns
+        with a gap in wall_col that fits their full height.  Only snaps when the
+        gap is framed by solid tiles above and below (rules out 1-tile steps).
+        """
+        if p.on_ground:
+            return False  # walking on flat ground — don't auto-align
+        GAP_SNAP = 6
+        ph_rows = 1 if p.crouching else P_H // TILE
+        for dy in range(1, GAP_SNAP + 1):
+            for sign in (-1, 1):  # try up first (player usually falls below gap)
+                tr = int((p.y + sign * dy) // TILE)
+                if any(self.world.solid(wall_col, tr + i) for i in range(ph_rows)):
+                    continue  # gap not clear at this offset
+                # Require solid wall tiles framing the gap above and below
+                if (self.world.solid(wall_col, tr - 1)
+                        and self.world.solid(wall_col, tr + ph_rows)):
+                    p.y += sign * dy
+                    return True
+        return False
+
     def _move_x(self, p):
         p.x += p.vx
         p.wall_contact = 0
@@ -1009,6 +1036,8 @@ class Game:
             for row in self._occupied_rows(p):
                 if self.world.solid(lc, row):
                     if self._try_ledge_grab(p, lc, row, -1):
+                        return
+                    if self._gap_snap(p, lc):
                         return
                     p.x = float((lc + 1) * TILE)
                     p.vx = 0.0
@@ -1019,6 +1048,8 @@ class Game:
             for row in self._occupied_rows(p):
                 if self.world.solid(rc, row):
                     if self._try_ledge_grab(p, rc, row, 1):
+                        return
+                    if self._gap_snap(p, rc):
                         return
                     p.x = float(rc * TILE - P_W)
                     p.vx = 0.0

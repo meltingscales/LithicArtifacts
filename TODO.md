@@ -4,12 +4,11 @@
 
 <!--None yet.-->
 
-- Player can't go through 2-block-high gaps in walls. Maybe lower their pushbox height very slightly? Or suggest another fix.
-
 
 ## Gameplay
 - Floors / progression (floor counter, difficulty scaling)
 
+- Jumping should be able to be partial, based on how long the jump button is held down.
 
 ## Worldgen
 - Difficulty scaling: denser spawns + harder enemies deeper down, but better artifacts.
@@ -18,6 +17,22 @@
 
 <!--None yet.-->
 
+## Artifacts
+
+Mechaspider legs
+- Spidertron climbing legs
+- Anchor or traverse blocks
+- Similar animation to factorio spidertron 
+- Procedurally generated climbing animation with eight legs 
+
+
+Jump sphere
+- Simple double jump
+
+Viv Wings
+- Short flight after single or double jump
+- Wireframe esque like Viv ribbon, dithered too
+
 
 ## Other
 - Make sure assets/ is included in .spec file
@@ -25,6 +40,13 @@
 - Seeded runs with seed visible in pause menu
   - we should also seed all RNG with an int
   - by default, it's `314159`
+
+- Debug F1 menu lets you also reset the game with a specific seed.
+
+- Special seeds for testing should exist:
+  - `0`: Wall playground with many different types of walls to test wall phasing and collision detection.
+  - `1`: Empty world with no walls to test floor progression and artifact spawning.
+  - `2`: "Gauntlet" seed with all enemy types in different chambers, to test combat mechanics.
 
 ## Later
 - Set up pyinstaller release for Steam distribution
