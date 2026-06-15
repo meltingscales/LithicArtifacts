@@ -248,7 +248,8 @@ class FractalBullet:
         self.hit_enemies: set = set()
         # fmt: on
         self._waypoints = self._build_waypoints(x, y, nx, ny, julia_cache, cam)
-        self._wp_idx    = 0  # fmt: skip
+        self._wp_idx    = 0           # fmt: skip
+        self._jitter    = random.uniform(-0.2, 0.2)  # fmt: skip
 
     @staticmethod
     def _build_waypoints(gx, gy, nx, ny, cache, cam):
@@ -287,9 +288,13 @@ class FractalBullet:
             if dist <= self.SPEED:
                 self.x, self.y = wx, wy
                 self._wp_idx += 1
+                self._jitter = random.uniform(-0.2, 0.2)
             else:
-                self.x += ddx / dist * self.SPEED
-                self.y += ddy / dist * self.SPEED
+                c, s = math.cos(self._jitter), math.sin(self._jitter)
+                jx = (ddx * c - ddy * s) / dist * self.SPEED
+                jy = (ddx * s + ddy * c) / dist * self.SPEED
+                self.x += jx
+                self.y += jy
         else:
             self.x += self._nx * self.SPEED
             self.y += self._ny * self.SPEED
