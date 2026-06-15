@@ -1297,19 +1297,35 @@ class Game:
                     p.ledge_cd = 6
                     p.vy = 0.5
         elif p.climbing:
-            # MechaspiderLegs wall-climb: vertical movement, no gravity
-            p.aim_dx = p.facing
-            p.aim_dy = 0
+            # MechaspiderLegs wall-climb: 2D movement along wall, no gravity
+            p.aim_locked = self._aim_lock()
             if jump:
-                # Jump away from wall
+                # Jump away from wall using stored wall side
+                wall_side = next(
+                    (a._wall_side for a in p.artifacts if isinstance(a, MechaspiderLegs)),
+                    p.wall_contact,
+                )
                 p.climbing = False
                 p.vy = WALL_JUMP_VEL
-                p.vx = -p.wall_contact * WALL_JUMP_HVX
+                p.vx = -wall_side * WALL_JUMP_HVX
                 p.jump_type = "spin"
+            elif p.aim_locked:
+                # Freeze position; direction keys steer aim
+                ady = (-1 if self._up() else 0) + (1 if self._down() else 0)
+                if adx != 0 or ady != 0:
+                    p.aim_dx = adx if adx != 0 else p.facing
+                    p.aim_dy = ady
+                p.vx = 0.0
+                p.vy = 0.0
             else:
                 climb_dy = (-1 if self._up() else 0) + (1 if self._down() else 0)
                 p.vy = climb_dy * CLIMB_SPEED
-                p.vx = 0.0
+                p.vx = adx * MOVE_SPEED
+                if adx != 0:
+                    p.facing = adx
+                p.aim_dx = p.facing
+                p.aim_dy = climb_dy
+                self._move_x(p)
                 self._move_y(p)
                 self._probe_walls(p)
                 if p.on_ground:

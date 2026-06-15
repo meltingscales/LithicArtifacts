@@ -171,7 +171,7 @@ class MechaspiderLegs(Artifact):
 
     # fmt: off
     _N_LEGS     = 8
-    _LEG_REACH  = 3   # tile rows searched above/below preferred height
+    _LEG_REACH  = 4   # tile radius searched for nearest anchor tile face
     _STEP_DIST  = 5   # px displacement before a foot replants
     _STEP_FRAMES = 10  # frames to complete one step animation
     # fmt: on
@@ -183,45 +183,67 @@ class MechaspiderLegs(Artifact):
         self._step_from  = [(0.0, 0.0)] * self._N_LEGS
         self._step_to    = [(0.0, 0.0)] * self._N_LEGS
         self._tick       = 0
-        self._initialized = False
+        self._wall_side  = 1   # 1=right, -1=left; locked when grip starts
         # fmt: on
 
     # ---- helpers ----
-
-    def _wall_col(self, player):
-        if player.wall_contact == 1:
-            return int(player.right // _TILE)
-        return int(player.x // _TILE) - 1
 
     def _preferred_y(self, player, i):
         """World-space Y for leg i's shoulder, spread across player height ±4 px."""
         return player.y + (i / (self._N_LEGS - 1)) * (_P_H + 8) - 4
 
     def _find_anchor(self, player, world, preferred_y):
-        """Return (fx, fy) world coords of nearest solid tile on the wall column."""
-        wc = self._wall_col(player)
-        prow = int(preferred_y // _TILE)
-        for dr in range(self._LEG_REACH + 1):
-            for sign in (0, -1, 1):
-                r = prow + sign * dr
-                if world.solid(wc, r):
-                    # Foot touches the edge of the tile facing the player
-                    fx = float(wc * _TILE) if player.wall_contact == 1 else float((wc + 1) * _TILE)
-                    fy = r * _TILE + _TILE * 0.5
-                    return fx, fy
-        return None
+        """Nearest solid tile face to the preferred foot position.
+
+        Searches all tiles within _LEG_REACH in both axes. For each solid tile
+        considers all 4 face-center points, returning the globally nearest one.
+        Handles rough / diagonal / cave surfaces on any side.
+        """
+        ws = self._wall_side
+        # Preferred foot: one tile out from the player edge on the wall side
+        if ws == 1:
+            pref_x = player.right + _TILE * 0.5
+        else:
+            pref_x = player.x - _TILE * 0.5
+        pref_y = preferred_y
+
+        pcol = int(pref_x // _TILE)
+        prow = int(pref_y // _TILE)
+        R = self._LEG_REACH + 1
+
+        best = None
+        best_dist = float("inf")
+        for dc in range(-R, R + 1):
+            for dr in range(-R, R + 1):
+                c, r = pcol + dc, prow + dr
+                if not world.solid(c, r):
+                    continue
+                x0 = c * _TILE
+                y0 = r * _TILE
+                hT = _TILE * 0.5
+                # 4 face centers: left, right, top, bottom
+                for fx, fy in (
+                    (x0,       y0 + hT),
+                    (x0 + _TILE, y0 + hT),
+                    (x0 + hT,  y0),
+                    (x0 + hT,  y0 + _TILE),
+                ):
+                    dist = math.sqrt((fx - pref_x) ** 2 + (fy - pref_y) ** 2)
+                    if dist < best_dist:
+                        best_dist = dist
+                        best = (fx, fy)
+        return best
 
     def _init_feet(self, player, world):
+        self._wall_side = player.wall_contact
         for i in range(self._N_LEGS):
             py = self._preferred_y(player, i)
             anchor = self._find_anchor(player, world, py)
             if anchor:
                 self._feet[i] = anchor
             else:
-                # Fall back: foot at body edge
-                bx = float(player.x + _TILE) if player.wall_contact == 1 else float(player.x)
+                bx = float(player.x + _TILE) if self._wall_side == 1 else float(player.x)
                 self._feet[i] = (bx, py)
-        self._initialized = True
 
     # ---- on_frame ----
 
@@ -251,28 +273,33 @@ class MechaspiderLegs(Artifact):
                 player.climbing = False
 
     def _update_feet(self, player, world):
+        wall_out = -self._wall_side   # direction away from wall (for step arc)
         for i in range(self._N_LEGS):
-            # Mid-step: interpolate from old to new anchor
-            if self._step_timer[i] > 0:
-                self._step_timer[i] -= 1
-                t = 1.0 - self._step_timer[i] / self._STEP_FRAMES
-                fx0, fy0 = self._step_from[i]
-                fx1, fy1 = self._step_to[i]
-                # Arc the foot away from the wall during mid-step
-                arc = math.sin(t * math.pi) * 3
-                wall_out = -1 if player.wall_contact == 1 else 1
-                self._feet[i] = (
-                    fx0 + (fx1 - fx0) * t + arc * wall_out,
-                    fy0 + (fy1 - fy0) * t,
-                )
-                continue
-
             py = self._preferred_y(player, i)
             fx, fy = self._feet[i]
-            # Replant if foot drifted too far from preferred height
-            if abs(fy - py) > self._STEP_DIST:
-                anchor = self._find_anchor(player, world, py)
-                if anchor and anchor != (fx, fy):
+
+            # Mid-step: interpolate, but allow override if target is now far off
+            if self._step_timer[i] > 0:
+                t_target_y = self._step_to[i][1]
+                if abs(t_target_y - py) > self._STEP_DIST * 2:
+                    # Target stale — cancel step, replant immediately below
+                    self._step_timer[i] = 0
+                else:
+                    self._step_timer[i] -= 1
+                    t = 1.0 - self._step_timer[i] / self._STEP_FRAMES
+                    fx0, fy0 = self._step_from[i]
+                    fx1, fy1 = self._step_to[i]
+                    arc = math.sin(t * math.pi) * 3
+                    self._feet[i] = (
+                        fx0 + (fx1 - fx0) * t + arc * wall_out,
+                        fy0 + (fy1 - fy0) * t,
+                    )
+                    continue
+
+            # Replant if foot drifted too far from preferred height or x
+            anchor = self._find_anchor(player, world, py)
+            if anchor and abs(fy - py) > self._STEP_DIST:
+                if anchor != (fx, fy):
                     self._step_from[i] = (fx, fy)
                     self._step_to[i] = anchor
                     self._step_timer[i] = self._STEP_FRAMES
@@ -288,7 +315,7 @@ class MechaspiderLegs(Artifact):
         for i in range(self._N_LEGS):
             # Shoulder: body edge at leg's preferred height
             sy_world = self._preferred_y(player, i)
-            if player.wall_contact == 1:
+            if self._wall_side == 1:
                 sx = int(player.x + _TILE - 1)
             else:
                 sx = int(player.x + 1)
