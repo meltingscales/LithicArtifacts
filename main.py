@@ -1776,11 +1776,22 @@ class Game:
             pyxel.text(px + 2, py + 1, "@", YELLOW)
             pyxel.text(px + 2, py + TILE + 1, "W", YELLOW)
 
-        # Aim reticle when locked
-        if p.aim_locked:
+        # Aim reticle: orange box when aim-locked; cyan cross when missile mode
+        missile_mode = self._missile_mode()
+        if p.aim_locked or missile_mode:
             cx = int(p.gun_x)
             cy = int(p.gun_y - cam)
-            pyxel.rectb(cx + p.aim_dx * 12 - 2, cy + p.aim_dy * 12 - 2, 5, 5, ORANGE)
+            rx = cx + p.aim_dx * 12
+            ry = cy + p.aim_dy * 12
+            if missile_mode:
+                # Cyan targeting cross (7×7 with corner gaps)
+                pyxel.rectb(rx - 3, ry - 3, 7, 7, 12)
+                pyxel.line(rx, ry - 5, rx, ry - 4, 12)
+                pyxel.line(rx, ry + 4, rx, ry + 5, 12)
+                pyxel.line(rx - 5, ry, rx - 4, ry, 12)
+                pyxel.line(rx + 4, ry, rx + 5, ry, 12)
+            else:
+                pyxel.rectb(rx - 2, ry - 2, 5, 5, ORANGE)
 
         # HP HUD — row of 4×4 blocks at bottom-left
         for i in range(p.max_hp):
