@@ -172,6 +172,7 @@ class MechaspiderLegs(Artifact):
     # fmt: off
     _N_LEGS      = 8
     _LEG_REACH   = 4    # tile radius searched for nearest anchor tile face
+    _MAX_LEG_LEN = 4 * _TILE   # px — unhook if shoulder→foot exceeds this
     _STEP_DIST   = 4    # px (2D) foot displacement before replanting
     _STEP_FRAMES = 10   # frames to complete one step animation
     _ELBOW_OUT   = 5    # px elbow bulge away from body center
@@ -202,22 +203,24 @@ class MechaspiderLegs(Artifact):
         return px, self._preferred_y(player, i)
 
     def _find_anchor(self, player, world, preferred_y):
-        """Nearest solid tile face to preferred foot, within _LEG_REACH radius.
+        """Nearest solid tile face reachable from the shoulder.
 
-        Searches all tiles in a square around the preferred foot position and
-        tests all 4 face-center points per tile. Handles rough / cave surfaces.
+        Searches within _LEG_REACH tiles of the shoulder (player body edge on
+        the wall side). Hard-caps the returned face to that same radius so no
+        leg can ever anchor to a tile the body cannot physically reach.
         """
-        pref_x = (player.right + _TILE * 0.5) if self._wall_side == 1 else (player.x - _TILE * 0.5)
-
-        pcol = int(pref_x // _TILE)
-        prow = int(preferred_y // _TILE)
-        R = self._LEG_REACH + 1
+        ws = self._wall_side
+        shoulder_x = player.right if ws == 1 else player.x
+        scol = int(shoulder_x // _TILE)
+        srow = int(preferred_y // _TILE)
+        R = self._LEG_REACH
+        max_reach = R * _TILE
 
         best = None
         best_dist = float("inf")
         for dc in range(-R, R + 1):
             for dr in range(-R, R + 1):
-                c, r = pcol + dc, prow + dr
+                c, r = scol + dc, srow + dr
                 if not world.solid(c, r):
                     continue
                 x0, y0, hT = c * _TILE, r * _TILE, _TILE * 0.5
@@ -227,29 +230,28 @@ class MechaspiderLegs(Artifact):
                     (x0 + hT,     y0),         # top face
                     (x0 + hT,     y0 + _TILE), # bottom face
                 ):
-                    dist = math.sqrt((fx - pref_x) ** 2 + (fy - preferred_y) ** 2)
-                    if dist < best_dist:
+                    dist = math.sqrt((fx - shoulder_x) ** 2 + (fy - preferred_y) ** 2)
+                    if dist < best_dist and dist <= max_reach:
                         best_dist = dist
                         best = (fx, fy)
         return best
 
     def _has_wall_grip(self, player):
-        """True if the player is within leg reach of any anchored foot.
+        """True if any anchored foot is within leg reach of the current shoulder.
 
-        As legs step to new tiles those tiles extend the reachable range, letting
-        the player traverse progressively further along rough surfaces.
-        Falls back to initial grip edge when no feet are anchored yet.
+        Progressive traversal: as the player moves toward a tile, their shoulder
+        gets closer and legs can reach the next tile from there.
         """
         ws = self._wall_side
-        edge = player.right if ws == 1 else player.x
+        shoulder_x = player.right if ws == 1 else player.x
         max_reach = self._LEG_REACH * _TILE
         for i in range(self._N_LEGS):
             if self._foot_anchored[i]:
-                fx, _ = self._feet[i]
-                if abs(edge - fx) <= max_reach:
+                fx, fy = self._feet[i]
+                if math.sqrt((fx - shoulder_x) ** 2 + (fy - (player.y + _P_H * 0.5)) ** 2) <= max_reach:
                     return True
         # Fallback: within reach of the initial wall
-        return abs(edge - self._grip_edge_x) <= max_reach
+        return abs(shoulder_x - self._grip_edge_x) <= max_reach
 
     def _init_feet(self, player, world):
         self._wall_side = player.wall_contact
@@ -281,9 +283,21 @@ class MechaspiderLegs(Artifact):
 
     def _update_feet(self, player, world):
         wall_out = -self._wall_side
+        ws = self._wall_side
+        shoulder_x = player.right if ws == 1 else player.x
         for i in range(self._N_LEGS):
             pref_x, pref_y = self._preferred_foot(player, i)
             fx, fy = self._feet[i]
+
+            # Unhook if leg is stretched beyond max length — snap to preferred
+            if self._foot_anchored[i]:
+                shoulder_y = pref_y   # shoulder y ≈ preferred y for this leg
+                leg_len = math.sqrt((fx - shoulder_x) ** 2 + (fy - shoulder_y) ** 2)
+                if leg_len > self._MAX_LEG_LEN:
+                    self._feet[i] = (pref_x, pref_y)
+                    self._foot_anchored[i] = False
+                    self._step_timer[i] = 0
+                    fx, fy = pref_x, pref_y
 
             # Mid-step: interpolate; cancel early if target became stale
             if self._step_timer[i] > 0:
