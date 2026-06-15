@@ -41,13 +41,17 @@ When you find a combination the game considers aberrant, it tells you. Then it t
 ## Files
 
 ```txt
-main.py: Main game logic
-artifacts.py: Rare artifacts declared here
-enemies.py: Enemies declared here
-worldgen.py: Worldgen, perlin noise etc, and dungeon/structures declared here
-assets/: Directory containing asset generation scripts and audio/image assets for game
-assets/generate-8x8-datamosh.py: Script to generate 8x8 datamoshed sprites
-assets/generate-audio-datamosh.py: Script to generate audio datamoshed samples
+main.py:      Game loop, input, camera, UI, pause/body panel (Game class)
+player.py:    Player data class
+world.py:     World tile map, section generation, artifact pool
+bullets.py:   All projectile classes (Bullet, MissileBullet, IceFragment, FractalBullet, …)
+pickups.py:   WorldPickup, MissileCanister
+artifacts.py: Artifact base class and all artifact implementations
+enemies.py:   Enemy classes (Crawler, Flyer, ShootyFlier, EnemyBullet)
+synergies.py: Synergy detection — adjacency checks and body-panel line registry
+worldgen.py:  Procedural section generation, Perlin noise, BFS traversability
+constants.py: Shared tunable constants (physics, combat, worldgen, seeds)
+assets/:      Asset generation scripts and audio/image assets
 ```
 
 ## Scope
@@ -82,7 +86,7 @@ pyxel.init(240, 160, title="Lithic Artifacts")
 
 ## Status
 
-Early concept. Not yet started.
+Early development. Playable prototype with core movement, artifacts, and synergies.
 
 ## Influences
 
