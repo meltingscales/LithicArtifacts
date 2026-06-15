@@ -1,5 +1,6 @@
 # Done
 
+- FractalBulletSmall splinters: FractalBullet emits 2 pink/red (color 14/8) splinters every 3rd waypoint advance (max 5 events); splinters pierce terrain+enemies, SPEED=2, LIFETIME=50, never break walls
 - Debug menu gamepad support: D-pad Up/Down to navigate, A to toggle, B/Start to close; hint text updated
 - Fractal Blaster artifact: shots trace real Julia set boundary (boundary cells extracted from cached grid, sorted by projection onto firing direction, bullet hops between waypoints); pierces enemies AND terrain; dithered Julia set background overlay on fire (3s fade, capped at 50% alpha; re-fire resets timer); slowly drifting c parameter
 - Artifact pickup dialogue: Tab/Start now dismisses dialogue and opens body panel; hint text updated to show both options ("Z dismiss / Tab install")

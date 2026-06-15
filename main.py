@@ -248,8 +248,10 @@ class FractalBullet:
         self.hit_enemies: set = set()
         # fmt: on
         self._waypoints = self._build_waypoints(x, y, nx, ny, julia_cache, cam)
-        self._wp_idx    = 0  # fmt: skip
-        self._jitter    = random.uniform(-0.2, 0.2)  # fmt: skip
+        self._wp_idx          = 0  # fmt: skip
+        self._jitter          = random.uniform(-0.2, 0.2)  # fmt: skip
+        self._splinter_events = 0  # fmt: skip
+        self.pending_splinters: list = []
 
     @staticmethod
     def _build_waypoints(gx, gy, nx, ny, cache, cam):
@@ -289,6 +291,14 @@ class FractalBullet:
                 self.x, self.y = wx, wy
                 self._wp_idx += 1
                 self._jitter = random.uniform(-0.2, 0.2)
+                if self._wp_idx % 3 == 0 and self._splinter_events < 5:
+                    self._splinter_events += 1
+                    base = random.uniform(0, math.tau)
+                    for i in range(2):
+                        angle = base + i * math.pi + random.uniform(-0.5, 0.5)
+                        self.pending_splinters.append(
+                            FractalBulletSmall(self.x, self.y, angle)
+                        )
             else:
                 c, s = math.cos(self._jitter), math.sin(self._jitter)
                 jx = (ddx * c - ddy * s) / dist * self.SPEED
@@ -308,6 +318,42 @@ class FractalBullet:
         if 0 <= sy < SCREEN_H:
             col = 12 if (pyxel.frame_count // 3) % 2 else 13  # cyan / indigo pulse
             pyxel.rect(int(self.x), sy, 3, 3, col)
+
+
+class FractalBulletSmall:
+    """Splinter fired by FractalBullet on boundary hits. Pierces terrain and enemies."""
+
+    # fmt: off
+    LIFETIME = 50
+    SPEED    = 2.0
+    DAMAGE   = 1
+    # fmt: on
+
+    def __init__(self, x, y, angle):
+        # fmt: off
+        self.x           = float(x)
+        self.y           = float(y)
+        self._vx         = math.cos(angle) * self.SPEED
+        self._vy         = math.sin(angle) * self.SPEED
+        self.life        = self.LIFETIME
+        self.alive       = True
+        self.piercing    = True
+        self.hit_enemies: set = set()
+        # fmt: on
+
+    def update(self, world):
+        self.x += self._vx
+        self.y += self._vy
+        self.life -= 1
+        if self.life <= 0:
+            self.alive = False
+        # Pierces terrain — no wall check; can_break_walls never set
+
+    def draw(self, cam):
+        sy = int(self.y - cam)
+        if 0 <= sy < SCREEN_H:
+            col = 14 if (pyxel.frame_count // 4) % 2 else 8  # pink / red pulse
+            pyxel.rect(int(self.x), sy, 2, 2, col)
 
 
 class WorldPickup:
@@ -1264,8 +1310,13 @@ class Game:
                 self.bullets.append(b)
                 p.shoot_cd = SHOOT_COOLDOWN
 
+        splinters = []
         for b in self.bullets:
             b.update(self.world)
+            if getattr(b, "pending_splinters", None):
+                splinters.extend(b.pending_splinters)
+                b.pending_splinters.clear()
+        self.bullets.extend(splinters)
 
         for mb in self.missile_bullets:
             mb.update(self.world)
