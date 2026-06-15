@@ -7,6 +7,13 @@ run:
 build:
     uv run pyinstaller lithic_artifacts.spec
 
+# Remove PyInstaller build artefacts
+clean:
+    rm -rf build/ dist/ __pycache__/
+
+# Clean then build
+rebuild: clean build
+
 install:
     uv sync
 

@@ -41,9 +41,7 @@ Viv Wings
 None yet.
 
 ## Later
-- Set up pyinstaller release for Steam distribution
-  - Make sure assets/ is included in .spec file
-  - Question: Should we make these python scripts into their own module in a folder called `./lithicartifacts/`? (No, do this later when packaging for pyinstaller)
+- Set up steam packaging and GitHub CICD
 
 
 - Set up steam packaging and GitHub CICD

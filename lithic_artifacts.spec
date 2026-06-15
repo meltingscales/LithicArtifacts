@@ -10,12 +10,20 @@ from PyInstaller.utils.hooks import collect_all
 # Pull in everything pyxel needs (native libs, default assets, etc.)
 pyxel_datas, pyxel_binaries, pyxel_hiddenimports = collect_all("pyxel")
 
+# noise is a C extension (Perlin noise); must be collected explicitly
+noise_datas, noise_binaries, noise_hiddenimports = collect_all("noise")
+
+# numpy is used directly in artifacts.py (FractalBlaster fractal rendering)
+numpy_datas, numpy_binaries, numpy_hiddenimports = collect_all("numpy")
+
 a = Analysis(
     ["main.py"],
     pathex=[],
-    binaries=pyxel_binaries,
-    datas=pyxel_datas,
-    hiddenimports=pyxel_hiddenimports,
+    binaries=pyxel_binaries + noise_binaries + numpy_binaries,
+    datas=[
+        ("assets", "assets"),   # game images and audio
+    ] + pyxel_datas + noise_datas + numpy_datas,
+    hiddenimports=pyxel_hiddenimports + noise_hiddenimports + numpy_hiddenimports,
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
