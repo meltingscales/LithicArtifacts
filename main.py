@@ -352,26 +352,27 @@ class Game:
             self.debug_cursor = (self.debug_cursor + 1) % n
         if pyxel.btnp(pyxel.KEY_Z) or pyxel.btnp(pyxel.KEY_RETURN):
             _, cls = DEBUG_ITEMS[self.debug_cursor]
-            inv_hit = next((a for a in self.inventory if isinstance(a, cls)), None)
-            bod_pos = next(
-                (
-                    (r, c)
-                    for r in range(5)
-                    for c in range(5)
-                    if isinstance(self.body_grid[r][c], cls)
-                ),
-                None,
-            )
             if cls is None:
                 self.immortal = not self.immortal
-            elif inv_hit:
-                self.inventory.remove(inv_hit)
-            elif bod_pos:
-                r, c = bod_pos
-                self.body_grid[r][c] = None
-                self._sync_artifacts()
             else:
-                self.inventory.append(cls())
+                inv_hit = next((a for a in self.inventory if isinstance(a, cls)), None)
+                bod_pos = next(
+                    (
+                        (r, c)
+                        for r in range(5)
+                        for c in range(5)
+                        if isinstance(self.body_grid[r][c], cls)
+                    ),
+                    None,
+                )
+                if inv_hit:
+                    self.inventory.remove(inv_hit)
+                elif bod_pos:
+                    r, c = bod_pos
+                    self.body_grid[r][c] = None
+                    self._sync_artifacts()
+                else:
+                    self.inventory.append(cls())
         if pyxel.btnp(pyxel.KEY_ESCAPE):
             self.debug_open = False
 

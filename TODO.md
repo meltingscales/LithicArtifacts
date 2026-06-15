@@ -5,22 +5,6 @@
 <!--None yet.-->
 - Frozen enemy sprites shouldn't be replaced with a glyph, but the same sprite they already have, just tinted blue.
 
-- Choosing immortality in the debug menu has a bug: 
-    ~/Git/LithicArtifacts master* ⇡
-    ❯ just run
-    uv run python main.py
-    Traceback (most recent call last):
-      File "/home/henrypost/Git/LithicArtifacts/main.py", line 902, in update
-        self._update_debug()
-        ~~~~~~~~~~~~~~~~~~^^
-      File "/home/henrypost/Git/LithicArtifacts/main.py", line 355, in _update_debug
-        inv_hit = next((a for a in self.inventory if isinstance(a, cls)), None)
-      File "/home/henrypost/Git/LithicArtifacts/main.py", line 355, in <genexpr>
-        inv_hit = next((a for a in self.inventory if isinstance(a, cls)), None)
-                                                    ~~~~~~~~~~^^^^^^^^
-    TypeError: isinstance() arg 2 must be a type, a tuple of types, or a union
-    error: recipe `run` failed on line 5 with exit code 1
-    
 
 
 ## Artifacts
