@@ -25,7 +25,6 @@ None yet.
 
 <!--None yet.-->
 
-- Vampiric Cape trail should slowly disappear if the player is not moving.
 
 ## Other
 - Make sure assets/ is included in .spec file

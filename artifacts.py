@@ -126,13 +126,22 @@ class VampiricCape(Artifact):
     def __init__(self):
         # Circular buffer of (x, y) positions; oldest at index 0
         self._trail: deque = deque(maxlen=8)
-        self._tick = 0  # frame counter for trail sample rate
+        self._tick     = 0   # frame counter for trail sample rate
+        self._decay_cd = 0   # frames until next oldest-ghost removal
 
     def on_frame(self, player, world, inputs):
         self._tick += 1
         moving = abs(player.vx) > 0.1 or abs(player.vy) > 0.5
-        if moving and self._tick % 3 == 0:
-            self._trail.append((player.x, player.y))
+        if moving:
+            self._decay_cd = 20  # reset grace period while moving
+            if self._tick % 3 == 0:
+                self._trail.append((player.x, player.y))
+        else:
+            if self._decay_cd > 0:
+                self._decay_cd -= 1
+            elif self._trail:
+                self._trail.popleft()   # drop oldest ghost
+                self._decay_cd = 12     # pace between removals
 
     def on_kill(self, player):
         if random.random() < 1 / 3:
