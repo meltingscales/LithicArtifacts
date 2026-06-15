@@ -1,5 +1,6 @@
 # Done
 
+- Bug: Flyer/ShootyFlier phased through walls — destination-only check allowed sine to jump over walls when self.y was blocked for multiple frames; fixed by sweeping all tile rows between current and desired y
 - Ice Missiles artifact: hold RB+Z to fire; 2 dmg + 5s freeze on hit; ammo=10/30; `~:XX` HUD right of HP bar (yellow in missile mode); SELECT cycles missile types; MissileArtifact base class for future types
 - Biome transitions: 5 biomes (Dungeon→Caverns→Abyss→Depths→Inferno, cycles) every 6 sections; distinctive bg + tile colors per biome; "ENTERING [NAME]" modal on transition, 4s timer, re-triggers on backtrack
 

@@ -5,8 +5,6 @@
 <!--None yet.-->
 - Frozen enemy sprites shouldn't be replaced with a glyph, but the same sprite they already have, just tinted blue.
 
-- Sometimes, sinusoidal-movement-type enemies will phase through walls.
-
 - Choosing immortality in the debug menu has a bug: 
     ~/Git/LithicArtifacts master* ⇡
     ❯ just run

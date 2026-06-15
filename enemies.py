@@ -218,20 +218,15 @@ class Flyer(Enemy):
         dx = (player.x + _TILE / 2) - (self.x + _TILE / 2)
         self.vx = max(-_FLYER_SPEED, min(_FLYER_SPEED, dx * 0.04))
         self._move_x(world)
-        # Sinusoidal bob — only apply if the destination is clear
+        # Sinusoidal bob — sweep all rows swept by the body to prevent wall phasing
         desired_y = (
             self.base_y + math.sin(self.t * _FLYER_FREQ + self.phase) * _FLYER_AMP
         )
         lc = int(self.x // _TILE)
         rc = int((self.right - 1) // _TILE)
-        tr = int(desired_y // _TILE)
-        br = int((desired_y + _TILE - 1) // _TILE)
-        if not (
-            world.solid(lc, tr)
-            or world.solid(rc, tr)
-            or world.solid(lc, br)
-            or world.solid(rc, br)
-        ):
+        r0 = int(min(self.y, desired_y) // _TILE)
+        r1 = int((max(self.y, desired_y) + _TILE - 1) // _TILE)
+        if not any(world.solid(lc, r) or world.solid(rc, r) for r in range(r0, r1 + 1)):
             self.y = desired_y
 
 
