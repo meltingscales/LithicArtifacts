@@ -1,5 +1,7 @@
 # Done
 
+- Mysterious Rocket Fin artifact: passive, does nothing alone; synergizes with IceMissile (adjacent in body grid) to explode ice missiles into 8 rotating freeze-on-hit fragments
+
 - Mechaspider Legs artifact: 2D wall climbing with 8 procedural legs; 2-joint shoulders on circle, nearest-face tile anchoring, per-leg stretch unhook, progressive traversal, aim lock, all-4-side surface support
 
 - PyInstaller spec: added assets/ datas, collect_all for noise (C ext) and numpy; justfile gets clean/rebuild recipes; build/ dist/ added to .gitignore

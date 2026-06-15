@@ -110,6 +110,16 @@ class IceMissile(MissileArtifact):
         self.max_ammo = self.MAX_AMMO
 
 
+class RocketFin(Artifact):
+    """Passive upgrade — does nothing alone; pairs with other artifacts."""
+
+    # fmt: off
+    name        = "Mysterious Rocket Fin"
+    glyph       = "F"
+    description = "It's humming and slowly rotating. What does this thing do?"
+    # fmt: on
+
+
 class VampiricCape(Artifact):
     """Leave a ghostly afterimage trail while moving; kills have a 1-in-3
     chance to restore 1 HP."""

@@ -3,10 +3,10 @@ import pyxel
 import random
 
 # fmt: off
-from artifacts import FractalBlaster, IceMissile, MechaspiderLegs, MissileArtifact, SpiralBorer, VampiricCape, Wallbreaker
+from artifacts import FractalBlaster, IceMissile, MechaspiderLegs, MissileArtifact, RocketFin, SpiralBorer, VampiricCape, Wallbreaker
 from enemies   import Crawler, Flyer, ShootyFlier, EnemyBullet
 from worldgen  import gen_section
-from synergies import fractal_wallbreaker_active, fractal_wallbreaker_pairs
+from synergies import all_synergy_pairs, fractal_wallbreaker_active, rocketfin_ice_active
 from constants import (
     SCREEN_W, SCREEN_H, TILE, COLS,
     PREAMBLE_ROWS, SECTION_H, BIOME_SECTION_LEN,
@@ -64,6 +64,7 @@ _ARTIFACT_POOL = [
     VampiricCape,
     Wallbreaker,
     IceMissile,
+    RocketFin,
     FractalBlaster,
     MechaspiderLegs,
 ]  # artifact classes that can appear as world pickups
@@ -236,6 +237,7 @@ class MissileBullet:
         self.life            = self.LIFETIME
         self.alive           = True
         self.can_break_walls = False
+        self.synergy_ice_burst = False   # set True by RocketFin+IceMissile adjacency
         # fmt: on
 
     def update(self, world):
@@ -257,6 +259,60 @@ class MissileBullet:
             x = int(self.x)
             pyxel.rect(x, sy, 3, 3, 12)  # cyan body
             pyxel.pset(x + 1, sy + 1, 7)  # white center pixel
+
+    def spawn_ice_fragments(self):
+        """Return 8 IceFragment instances fanning out from this missile's position."""
+        frags = []
+        for i in range(8):
+            angle = math.tau * i / 8
+            frags.append(IceFragment(self.x, self.y, angle))
+        return frags
+
+
+class IceFragment:
+    """One shard from a RocketFin+IceMissile explosion — rotating fan of 8."""
+
+    # fmt: off
+    LIFETIME      = 60
+    SPEED         = 2.5
+    FREEZE_FRAMES = 180   # 3 s
+    DAMAGE        = 1
+    PHASE_FRAMES  = 6     # wall-phase grace period on spawn
+    # fmt: on
+
+    def __init__(self, x, y, angle):
+        # fmt: off
+        self.x      = float(x)
+        self.y      = float(y)
+        self.vx     = math.cos(angle) * self.SPEED
+        self.vy     = math.sin(angle) * self.SPEED
+        self.life   = self.LIFETIME
+        self.alive  = True
+        self._angle = angle
+        self._phase = self.PHASE_FRAMES
+        # fmt: on
+
+    def update(self, world):
+        self.x += self.vx
+        self.y += self.vy
+        self.life -= 1
+        if self.life <= 0:
+            self.alive = False
+            return
+        if self._phase > 0:
+            self._phase -= 1
+            return
+        col, row = int(self.x // TILE), int(self.y // TILE)
+        if world.solid(col, row):
+            self.alive = False
+
+    def draw(self, cam):
+        sy = int(self.y - cam)
+        if 0 <= sy < SCREEN_H:
+            # Alternate cyan/white to give sparkle effect
+            col = 12 if (self.life % 4) < 2 else 7
+            pyxel.pset(int(self.x), sy, col)
+            pyxel.pset(int(self.x) + 1, sy, col)
 
 
 class FractalBullet:
@@ -517,6 +573,7 @@ DEBUG_ITEMS = [
     ("Wallbreaker",          Wallbreaker),
     ("Vampiric Cape",        VampiricCape),
     ("Ice Missiles",         IceMissile),
+    ("Rocket Fin",           RocketFin),
     ("Fractal Blaster",      FractalBlaster),
     ("Mechaspider Legs",     MechaspiderLegs),
     ("Immortality?",         None),             # None  = boolean flag, not artifact
@@ -553,6 +610,7 @@ class Game:
         self.player              = Player()
         self.bullets             = []
         self.missile_bullets     = []
+        self.ice_fragments       = []
         self.canisters           = []
         self.cam_y               = 0.0
         # Pause / body-panel state
@@ -888,16 +946,16 @@ class Game:
                 elif a:
                     pyxel.text(x0 + 3, y0 + 3, a.glyph, LIGHT_GRAY)
 
-        # Synergy link: pulsing line between adjacent FractalBlaster ↔ Wallbreaker
+        # Synergy links: pulsing line between each adjacent synergy pair
         half = (_CELL - 1) // 2
         pulse = 0.4 + 0.6 * ((pyxel.frame_count // 8) % 2)
-        for r, c, nr, nc in fractal_wallbreaker_pairs(self.body_grid):
+        for r, c, nr, nc, col in all_synergy_pairs(self.body_grid):
             ax = _GX + c  * _CELL + half
             ay = _GY + r  * _CELL + half
             bx = _GX + nc * _CELL + half
             by = _GY + nr * _CELL + half
             pyxel.dither(pulse)
-            pyxel.line(ax, ay, bx, by, 14)
+            pyxel.line(ax, ay, bx, by, col)
             pyxel.dither(1.0)
 
         # "HOLDING" indicator below the grid
@@ -1193,6 +1251,7 @@ class Game:
         self.enemy_bullets   = []
         self.bullets         = []
         self.missile_bullets = []
+        self.ice_fragments   = []
         self.canisters       = []
         self.cam_y           = 0.0
         self.dead            = False
@@ -1460,6 +1519,7 @@ class Game:
                 art = self._active_missile()
                 if art and art.ammo > 0:
                     mb = MissileBullet(p.gun_x, p.gun_y, dx, dy)
+                    mb.synergy_ice_burst = isinstance(art, IceMissile) and rocketfin_ice_active(self.body_grid)
                     for a in p.artifacts:
                         a.on_shoot(p, mb)
                     self.missile_bullets.append(mb)
@@ -1490,8 +1550,13 @@ class Game:
                 b.pending_splinters.clear()
         self.bullets.extend(splinters)
 
+        new_frags = []
         for mb in self.missile_bullets:
+            was_alive = mb.alive
             mb.update(self.world)
+            if was_alive and not mb.alive and mb.synergy_ice_burst:
+                new_frags.extend(mb.spawn_ice_fragments())
+        self.ice_fragments.extend(new_frags)
 
         # Player bullets vs enemies
         for b in self.bullets:
@@ -1534,11 +1599,36 @@ class Game:
                         for a in p.artifacts:
                             a.on_kill(p)
                         self._maybe_drop_canister(e)
+                    if mb.synergy_ice_burst:
+                        self.ice_fragments.extend(mb.spawn_ice_fragments())
                     mb.alive = False
+                    break
+
+        # Ice fragments update + vs enemies
+        for frag in self.ice_fragments:
+            frag.update(self.world)
+        for frag in self.ice_fragments:
+            if not frag.alive:
+                continue
+            for e in self.enemies:
+                if e.alive and (
+                    frag.x < e.right
+                    and frag.x + 2 > e.x
+                    and frag.y < e.bottom
+                    and frag.y + 2 > e.y
+                ):
+                    e.take_damage(IceFragment.DAMAGE)
+                    e.frozen_timer = IceFragment.FREEZE_FRAMES
+                    if not e.alive:
+                        for a in p.artifacts:
+                            a.on_kill(p)
+                        self._maybe_drop_canister(e)
+                    frag.alive = False
                     break
 
         self.bullets = [b for b in self.bullets if b.alive]
         self.missile_bullets = [mb for mb in self.missile_bullets if mb.alive]
+        self.ice_fragments = [f for f in self.ice_fragments if f.alive]
 
         # Drain world spawn queue
         for sx, sy, etype in self.world.pending_spawns:
@@ -1636,6 +1726,7 @@ class Game:
         self.missile_bullets = [
             mb for mb in self.missile_bullets if mb.alive and mb.y > cull_y
         ]
+        self.ice_fragments = [f for f in self.ice_fragments if f.alive and f.y > cull_y]
         self.canisters = [c for c in self.canisters if c.alive and c.y > cull_y]
         self.world.pickups = [
             pu for pu in self.world.pickups if not pu.collected and pu.y > cull_y
@@ -1722,6 +1813,9 @@ class Game:
 
         for mb in self.missile_bullets:
             mb.draw(cam)
+
+        for frag in self.ice_fragments:
+            frag.draw(cam)
 
         for eb in self.enemy_bullets:
             eb.draw(cam)

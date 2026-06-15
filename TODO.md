@@ -18,14 +18,8 @@ None yet.
 ## Synergies
 <!--None yet.-->
 
-Mysterious Rocket Fin (aka charge missile)
-- If synergized with IceMissile, it explodes into a rotating cloud of ice fragments.
-
 ## Artifacts
 <!--None yet.-->
-
-Mysterious Rocket Fin (aka charge missile)
-- Does nothing on its own. description="It's humming and slowly rotating. What does this thing do?"
 
 Long jump
 - Doubles jump height, just like in metroid
