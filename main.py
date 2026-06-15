@@ -1313,7 +1313,8 @@ class Game:
                 # Freeze position; direction keys steer aim
                 ady = (-1 if self._up() else 0) + (1 if self._down() else 0)
                 if adx != 0 or ady != 0:
-                    p.aim_dx = adx if adx != 0 else p.facing
+                    # No horizontal input → shoot straight up/down (aim_dx = 0)
+                    p.aim_dx = adx if adx != 0 else (p.facing if ady == 0 else 0)
                     p.aim_dy = ady
                 p.vx = 0.0
                 p.vy = 0.0
