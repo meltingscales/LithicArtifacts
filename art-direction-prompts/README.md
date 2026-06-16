@@ -1,8 +1,13 @@
 # Art Direction Prompts
 
+## Tools
+
+- Aseprite
+- GIMP
+
 ## Workflow
 
-Still in progress. Idea: Use prompts to generate high-res images, then downscale them into 64x64 sprites using GIMP and nearest-neighbor (not bilinear), do cleanup/tiling, then do further cleanup in GIMP and downscale again into 8x8/8x16 sprites using GIMP and nearest-neighbor.
+Still in progress. Idea: Use prompts to generate high-res images, then downscale them into 64x64 sprites using some tool and nearest-neighbor (not bilinear), do cleanup/tiling, then do further cleanup in some tool and downscale again into 8x8/8x16 sprites using GIMP and nearest-neighbor.
 
 ## Overview
 
