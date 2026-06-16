@@ -32,7 +32,12 @@ class WorldPickup:
             return
         col = YELLOW if (pyxel.frame_count // 8) % 2 else ORANGE
         pyxel.rectb(int(self.x), sy, TILE, TILE, col)
-        pyxel.text(int(self.x) + 2, sy + 1, self.artifact_cls.glyph, YELLOW)
+        spr = self.artifact_cls.sprite
+        if spr:
+            img, sx, sy2, w, h, ck = spr
+            pyxel.blt(int(self.x), sy, img, sx, sy2, w, h, ck)
+        else:
+            pyxel.text(int(self.x) + 2, sy + 1, self.artifact_cls.glyph, YELLOW)
 
 
 class MissileCanister:

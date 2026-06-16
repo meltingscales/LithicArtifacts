@@ -87,8 +87,9 @@ DEBUG_ITEMS = [
 class Game:
     def __init__(self):
         pyxel.init(SCREEN_W, SCREEN_H, title="Lithic Artifacts", fps=60)
-        # Sprites — bank 0, (0,0): 16×8 flyer
+        # Sprites — bank 0, (0,0): 16×8 flyer; (16,0): 8×8 VampiricCape
         pyxel.images[0].load(0, 0, "assets/img/flyer.png")
+        pyxel.images[0].load(16, 0, "assets/img/VampiricCape.png")
         # Sound 0: flyer spawn buzz (short descending triangle)
         pyxel.sounds[0].set("e3d3c3", "t", "543", "nnn", 10)
         # Sound 1: flyer shoot (noise burst with fadeout)
@@ -442,7 +443,12 @@ class Game:
                 if is_cur and self.held:
                     pyxel.text(x0 + 3, y0 + 3, self.held.glyph, ORANGE)
                 elif a:
-                    pyxel.text(x0 + 3, y0 + 3, a.glyph, LIGHT_GRAY)
+                    spr = a.sprite
+                    if spr:
+                        img, sx, sy2, w, h, ck = spr
+                        pyxel.blt(x0 + 2, y0 + 2, img, sx, sy2, w, h, ck)
+                    else:
+                        pyxel.text(x0 + 3, y0 + 3, a.glyph, LIGHT_GRAY)
 
         # Synergy links: pulsing line between each adjacent synergy pair
         half = (_CELL - 1) // 2

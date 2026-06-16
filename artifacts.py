@@ -24,6 +24,7 @@ class Artifact:
     name        = ""
     glyph       = "?"
     description = ""
+    sprite      = None   # (img_bank, src_x, src_y, w, h, colkey) or None for glyph
     # fmt: on
 
     def on_frame(self, player, world, inputs):
@@ -128,6 +129,7 @@ class VampiricCape(Artifact):
     name        = "Vampiric Cape"
     glyph       = "V"
     description = ("A spectral cape that drinks the life from fallen foes.")
+    sprite      = (0, 16, 0, 8, 8, 0)   # bank 0, (16,0), 8×8, colkey=black
     # fmt: on
 
     # Pyxel color indices, oldest ghost → newest ghost (8 steps)
