@@ -88,9 +88,10 @@ DEBUG_ITEMS = [
 class Game:
     def __init__(self):
         pyxel.init(SCREEN_W, SCREEN_H, title="Lithic Artifacts", fps=60)
-        # Sprites — bank 0, (0,0): 16×8 flyer; (16,0): 8×8 VampiricCape
+        # Sprites — bank 0, (0,0): 16×8 flyer; (16,0): 8×8 VampiricCape; (24,0): 8×8 MissileCanister
         pyxel.images[0].load(0, 0, "assets/img/flyer.png")
         pyxel.images[0].load(16, 0, "assets/img/VampiricCape.png")
+        pyxel.images[0].load(24, 0, "assets/img/missilecanister.png")
         # Sound 0: flyer spawn buzz (short descending triangle)
         pyxel.sounds[0].set("e3d3c3", "t", "543", "nnn", 10)
         # Sound 1: flyer shoot (noise burst with fadeout)

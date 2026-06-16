@@ -76,6 +76,4 @@ class MissileCanister:
             return
         if self.timer < self.BLINK_START and (self.timer // self.BLINK_RATE) % 2 == 1:
             return
-        col = 12 if (pyxel.frame_count // 8) % 2 else 7  # cyan / white pulse
-        pyxel.rectb(int(self.x), sy, TILE, TILE, col)
-        pyxel.text(int(self.x) + 2, sy + 1, "~", col)
+        pyxel.blt(int(self.x), sy, 0, 24, 0, 8, 8, 0)
