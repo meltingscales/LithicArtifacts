@@ -23,6 +23,14 @@ fmt:
 lint:
     uvx ruff check .
 
+# Cyclomatic complexity report (A=1-5 B=6-10 C=11-15 D=16-20 E=21-25 F=26+)
+radon:
+    uvx radon cc main.py artifacts.py worldgen.py world.py player.py bullets.py pickups.py synergies.py enemies.py constants.py -s -a
+
+# Pylint static analysis report
+pylint:
+    uvx pylint main.py artifacts.py worldgen.py world.py player.py bullets.py pickups.py synergies.py enemies.py constants.py --output-format=colorized
+
 # Extended help for `audio`:
 #   MODE (positional): wavetable | noise | both  (default: both)
 #     wavetable  — 8×8 image patches → cubic-interpolated wavetables, morphed per clip
