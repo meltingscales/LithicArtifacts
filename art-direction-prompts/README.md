@@ -4,6 +4,7 @@
 
 - Aseprite
 - GIMP
+  - Use "None" for interpolation - this is the same as "Nearest Neighbor".
 
 ## Workflow
 
