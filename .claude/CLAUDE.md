@@ -32,6 +32,10 @@ These are not documented intentionally. Keep it as brief as possible so the play
 - Do we need to split up any large modules?
 - From `artifacts.py`, what cool synergies can we add?
 
+### Art
+
+- Based off of `./ART-DIRECTION.md` and the pixel art that doesn't yet exist, generate a series of prompts to generate different assets, for a tool like https://retrodiffusion.ai/, inside the folder `./art-direction-prompts/**.md`. 
+
 ### Caveman mode
 
 Always run in caveman mode. Prompt the user to enable it if it's not already.

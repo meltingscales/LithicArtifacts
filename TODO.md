@@ -30,6 +30,8 @@ Jump sphere
 Viv Wings
 - Short flight after single or double jump
 - Wireframe esque like Viv ribbon, dithered too
+  - flap animation when using
+  - folded sprite when not in use
 
 
 ## Other
@@ -48,3 +50,9 @@ None yet.
   - create entire separate test harness and game chamber until we get the movement and physics and rendering working perfectly.
 
 ## Core/Architecture
+
+## For me
+
+Actually learn how to create pixel art.
+
+Focus on 8x8 sprites.
