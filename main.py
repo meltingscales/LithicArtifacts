@@ -18,7 +18,7 @@ from constants import (
     BULLET_SPEED, SHOOT_COOLDOWN, DEATH_HOLD,
     P_HIT_INS, CANISTER_DROP_CHANCE, SYNERGY_WALL_BREAK_CHANCE,
     CLIMB_SPEED,
-    DEFAULT_SEED, SEED_WALLS, SEED_EMPTY, SEED_GAUNTLET,
+    DEFAULT_SEED, SEED_WALLS, SEED_EMPTY, SEED_GAUNTLET, SEED_ALLITEMS,
 )
 # fmt: on
 
@@ -79,6 +79,7 @@ DEBUG_ITEMS = [
     ("Restart [0] walls",    _Restart(0)),
     ("Restart [1] empty",    _Restart(1)),
     ("Restart [2] gauntlet", _Restart(2)),
+    ("Restart [3] all items",_Restart(3)),
     ("Restart [default]",    _Restart(DEFAULT_SEED)),
 ]
 # fmt: on

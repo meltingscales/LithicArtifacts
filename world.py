@@ -8,7 +8,7 @@ from pickups  import WorldPickup
 from worldgen import gen_section
 from constants import (
     TILE, COLS, PREAMBLE_ROWS, SECTION_H,
-    DEFAULT_SEED, SEED_WALLS, SEED_EMPTY, SEED_GAUNTLET,
+    DEFAULT_SEED, SEED_WALLS, SEED_EMPTY, SEED_GAUNTLET, SEED_ALLITEMS,
 )
 # fmt: on
 
@@ -46,7 +46,11 @@ class World:
             self.tiles[(COLS - 1, y)]   = 1
             # fmt: on
 
-        if seed == SEED_WALLS:
+        if seed == SEED_ALLITEMS:
+            # Open preamble: left-side platform at row 8 only, no divider yet
+            for x in range(1, COLS - 1):
+                self.tiles[(x, 8)] = 1
+        elif seed == SEED_WALLS:
             # Wall playground: 4 vertical walls with 2-tile-high gaps at
             # different heights — tests gap traversal and SpiralBorer phasing.
             # fmt: off
@@ -65,8 +69,8 @@ class World:
                 if not (gap <= x < gap + 5):
                     self.tiles[(x, 8)] = 1
 
-        # Pre-generate several sections so the player never hits a blank wall
-        self._gen_up_to(4)
+        # Pre-generate sections (all of them for SEED_ALLITEMS; 4 for normal)
+        self._gen_up_to(len(_ARTIFACT_POOL) if seed == SEED_ALLITEMS else 4)
 
     # ---- section generation ----
 
@@ -77,13 +81,61 @@ class World:
         self._next_art_sec = self._gen_sections + self.rng.randint(3, 6)
         return cls
 
+    def _gen_allitems_section(self, abs_start, idx):
+        """
+        Hand-crafted room for SEED_ALLITEMS.
+        Left half (cols 1–14): zigzag stair ledge for vertical navigation.
+        Right half (cols 16–28): open room with artifact pedestal on the floor.
+        Divider at col 15 with a 3-tile gap at rows abs_start+7 to abs_start+9.
+        """
+        # fmt: off
+        DIVIDER   = 15
+        GAP_TOP   = abs_start + 7
+        GAP_BOT   = abs_start + 9    # inclusive
+        FLOOR_ROW = abs_start + SECTION_H - 3
+        # Ledge alternates high (row +5) / low (row +13) per section — zigzag
+        LEDGE_ROW = abs_start + (5 if idx % 2 == 0 else 13)
+        # Pedestal sits on the right-zone floor, centred between divider and right wall
+        PED_COL   = DIVIDER + 1 + (COLS - DIVIDER - 3) // 2
+        # fmt: on
+
+        tiles = {}
+        # Boundary walls
+        for r in range(SECTION_H):
+            tiles[(0,          abs_start + r)] = 1
+            tiles[(COLS - 1,   abs_start + r)] = 1
+
+        # Divider wall with gap
+        for r in range(abs_start, abs_start + SECTION_H):
+            if not (GAP_TOP <= r <= GAP_BOT):
+                tiles[(DIVIDER, r)] = 1
+
+        # Left staircase ledge (full-width left zone)
+        for c in range(2, DIVIDER):
+            tiles[(c, LEDGE_ROW)] = 1
+
+        # Right-zone floor
+        for c in range(DIVIDER + 1, COLS - 1):
+            tiles[(c, FLOOR_ROW)] = 1
+
+        art_cls = _ARTIFACT_POOL[idx]
+        pickup_spec = (PED_COL, FLOOR_ROW - 1, art_cls)
+        return tiles, [], pickup_spec
+
     def _gen_up_to(self, n_sections):
         """Generate sections until at least n_sections exist."""
         while self._gen_sections < n_sections:
             abs_start = PREAMBLE_ROWS + self._gen_sections * SECTION_H
             art_cls   = self._pick_artifact_cls()  # fmt: skip
 
-            if self.seed == SEED_WALLS and self._gen_sections == 0:
+            if self.seed == SEED_ALLITEMS:
+                if self._gen_sections >= len(_ARTIFACT_POOL):
+                    break   # all items shown; stop generating
+                tiles, spawns, pickup_spec = self._gen_allitems_section(
+                    abs_start, self._gen_sections
+                )
+                fl, fr = self._free_l, self._free_r
+            elif self.seed == SEED_WALLS and self._gen_sections == 0:
                 # Hand-crafted 1-block step test: solid floor + pillars every 3 cols.
                 # Verifies gap_snap doesn't auto-climb 1-tile obstacles.
                 floor_r = abs_start + SECTION_H - 3

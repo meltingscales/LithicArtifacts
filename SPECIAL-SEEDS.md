@@ -37,3 +37,21 @@ Every section gets one Crawler, one Flyer, and one ShootyFlier added on top of
 whatever the normal generator produces.
 
 **Use for:** combat tuning, enemy interaction testing, artifact damage output.
+
+---
+
+## Seed 3 — All Items
+
+One hand-crafted room per artifact in `_ARTIFACT_POOL`. No enemies.
+
+Room layout per section:
+- **Left half (cols 1–14):** zigzag stair ledge — alternates high (row +5) / low
+  (row +13) each section, so the player must jump down and across to descend.
+- **Divider (col 15):** solid wall with a 3-tile gap at rows +7 to +9 — enter the
+  right zone by walking through the gap.
+- **Right half (cols 16–28):** open room with a solid floor and an artifact pedestal
+  centred on that floor.
+
+Generation stops after all artifacts are shown.
+
+**Use for:** artifact testing, pickup flow, body-panel interaction, synergy testing.

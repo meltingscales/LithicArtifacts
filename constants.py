@@ -84,8 +84,9 @@ CLIMB_SPEED          = 1.5   # px/frame vertical speed while wall-climbing
 
 # ---- Seeds ------------------------------------------------------------
 # fmt: off
-DEFAULT_SEED  = 314159   # default run seed; displayed in the pause menu
-SEED_WALLS    = 0        # wall playground: gapped vertical walls in preamble
-SEED_EMPTY    = 1        # empty world: no interior tiles or enemy spawns per section
-SEED_GAUNTLET = 2        # gauntlet: all three enemy types added to every section
+DEFAULT_SEED   = 314159  # default run seed; displayed in the pause menu
+SEED_WALLS     = 0       # wall playground: gapped vertical walls in preamble
+SEED_EMPTY     = 1       # empty world: no interior tiles or enemy spawns per section
+SEED_GAUNTLET  = 2       # gauntlet: all three enemy types added to every section
+SEED_ALLITEMS  = 3       # item showcase: one room per artifact, stair-left / pedestal-right
 # fmt: on
