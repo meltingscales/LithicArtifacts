@@ -260,7 +260,13 @@ class Game:
         pyxel.rectb(px0, py0, pw, ph, YELLOW)
         pyxel.text(px0 + 4, py0 + 5, "ARTIFACT FOUND", ORANGE)
         pyxel.line(px0 + 1, py0 + 14, px0 + pw - 2, py0 + 14, DARK_GRAY)
-        pyxel.text(px0 + 4, py0 + 20, f"{cls.glyph}  {cls.name}", YELLOW)
+        spr = cls.sprite
+        if spr:
+            img, sx, sy2, w, h, ck = spr
+            pyxel.blt(px0 + 4, py0 + 18, img, sx, sy2, w, h, ck)
+            pyxel.text(px0 + 14, py0 + 20, cls.name, YELLOW)
+        else:
+            pyxel.text(px0 + 4, py0 + 20, f"{cls.glyph}  {cls.name}", YELLOW)
         for i, ln in enumerate(self._wrap(cls.description, 46)[:3]):
             pyxel.text(px0 + 4, py0 + 34 + i * 10, ln, LIGHT_GRAY)
         pyxel.text(px0 + 4, py0 + ph - 19, "Z / X  dismiss", DARK_GRAY)
@@ -442,7 +448,12 @@ class Game:
                     x0, y0, _CELL - 1, _CELL - 1, YELLOW if is_cur else DARK_GRAY
                 )
                 if is_cur and self.held:
-                    pyxel.text(x0 + 3, y0 + 3, self.held.glyph, ORANGE)
+                    spr = self.held.sprite
+                    if spr:
+                        img, sx, sy2, w, h, ck = spr
+                        pyxel.blt(x0 + 2, y0 + 2, img, sx, sy2, w, h, ck)
+                    else:
+                        pyxel.text(x0 + 3, y0 + 3, self.held.glyph, ORANGE)
                 elif a:
                     spr = a.sprite
                     if spr:
