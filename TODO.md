@@ -1,8 +1,10 @@
 # TODO
 
 ## Bugs
+<!--None yet.-->
 
-None yet.
+When doing a walljump, it should force you in the other direction just enough so that you can't recover any vertical momentum, unless you go the other direction. Just like in Metroid Fusion.
+- To walljump, you need to press away from the wall you're facing and hit jump again within a short (0.2s) time window.
 
 ## Gameplay
 - Floors / progression (floor counter, difficulty scaling)
@@ -10,16 +12,16 @@ None yet.
 
 ## Worldgen
 - Difficulty scaling: denser spawns + harder enemies deeper down, but better artifacts.
+  - artifact drop table chances in constants.py with biome modifier chance dict
 
 ## Visuals/Aesthetic
-
 None yet.
 
 ## Synergies
-<!--None yet.-->
+None yet.
 
 ## Artifacts
-<!--None yet.-->
+None yet.
 
 Long jump
 - Doubles jump height, just like in metroid
@@ -33,6 +35,13 @@ Viv Wings
   - flap animation when using
   - folded sprite when not in use
 
+## Enemies
+
+The fliers should have an idle animation (sine wave flight) until they see you (within 4 tiles). Then, they should signal to the player that they are ready to attack, and then swoop towards you briefly. Then resume their pre-programmed flight pattern/attack pattern.
+
+## Bosses
+
+None yet.
 
 ## Other
 
