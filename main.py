@@ -14,7 +14,7 @@ from constants import (
     SCREEN_W, SCREEN_H, TILE, COLS,
     PREAMBLE_ROWS, SECTION_H, BIOME_SECTION_LEN,
     GRAVITY, MAX_FALL, MOVE_SPEED,
-    JUMP_VEL, JUMP_VEL_MIN, WALL_JUMP_VEL, WALL_JUMP_HVX, WALL_JUMP_CD,
+    JUMP_VEL, JUMP_VEL_MIN, WALL_JUMP_VEL, WALL_JUMP_HVX, WALL_JUMP_CD, WALL_JUMP_WINDOW, WALL_JUMP_COYOTE,
     BULLET_SPEED, SHOOT_COOLDOWN, DEATH_HOLD,
     P_HIT_INS, CANISTER_DROP_CHANCE, SYNERGY_WALL_BREAK_CHANCE,
     CLIMB_SPEED,
@@ -540,6 +540,20 @@ class Game:
             or pyxel.btn(pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT)
         )
 
+    def _left_p(self):
+        return (
+            pyxel.btnp(pyxel.KEY_LEFT)
+            or pyxel.btnp(pyxel.KEY_H)
+            or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_DPAD_LEFT)
+        )
+
+    def _right_p(self):
+        return (
+            pyxel.btnp(pyxel.KEY_RIGHT)
+            or pyxel.btnp(pyxel.KEY_L)
+            or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT)
+        )
+
     def _up(self):
         return (
             pyxel.btn(pyxel.KEY_UP)
@@ -829,6 +843,10 @@ class Game:
             p.wj_cd_l -= 1
         if p.wj_cd_r > 0:
             p.wj_cd_r -= 1
+        if p.wj_away_window > 0:
+            p.wj_away_window -= 1
+        if p.wj_coyote > 0:
+            p.wj_coyote -= 1
         if p.ledge_cd > 0:
             p.ledge_cd -= 1
         if p.inv_cd > 0:
@@ -992,6 +1010,20 @@ class Game:
                     p.crouching = True
                     p.vx = 0.0
 
+            # Coyote wall contact: maintain effective wall side briefly after leaving wall
+            if p.wall_contact != 0:
+                p.wj_coyote      = WALL_JUMP_COYOTE
+                p.wj_coyote_side = p.wall_contact
+            eff_wall = p.wall_contact or (p.wj_coyote_side if p.wj_coyote > 0 else 0)
+
+            # Metroid Fusion wall jump: pressing away from wall opens a brief window;
+            # jump must be pressed within that window to execute the wall jump.
+            if eff_wall != 0 and not p.on_ground:
+                adx_p = (-1 if self._left_p() else 0) + (1 if self._right_p() else 0)
+                if adx_p == -eff_wall:   # just pressed the away direction
+                    p.wj_away_window = WALL_JUMP_WINDOW
+                    p.wj_away_side   = eff_wall
+
             if (
                 jump and not p.burrowing and not p.crouching
             ):  # crouching uncrouches above
@@ -1001,15 +1033,21 @@ class Game:
                     p.jump_type = "spin" if adx != 0 else "straight"
                     if p.jump_type == "straight":
                         p.vx = 0.0
-                elif p.wall_contact != 0:
-                    can = (p.wall_contact == -1 and p.wj_cd_l == 0) or (
-                        p.wall_contact == 1 and p.wj_cd_r == 0
+                elif eff_wall != 0:
+                    can_cd  = (eff_wall == -1 and p.wj_cd_l == 0) or (
+                        eff_wall == 1 and p.wj_cd_r == 0
                     )
-                    if can:
-                        p.vy = WALL_JUMP_VEL
-                        p.vx = -p.wall_contact * WALL_JUMP_HVX
-                        p.jump_type = "spin"
-                        if p.wall_contact == -1:
+                    in_window = (
+                        p.wj_away_window > 0 and p.wj_away_side == eff_wall
+                    )
+                    if can_cd and in_window:
+                        p.vy             = WALL_JUMP_VEL
+                        p.vx             = -eff_wall * WALL_JUMP_HVX
+                        p.jump_type      = "spin"
+                        p.wj_rise_wall   = eff_wall   # track for momentum penalty
+                        p.wj_away_window = 0
+                        p.wj_coyote      = 0
+                        if eff_wall == -1:
                             p.wj_cd_l = WALL_JUMP_CD
                         else:
                             p.wj_cd_r = WALL_JUMP_CD
@@ -1017,6 +1055,12 @@ class Game:
             # Variable jump height: release jump early to cut the rise
             if p.vy < JUMP_VEL_MIN and not self._jump_held():
                 p.vy = JUMP_VEL_MIN
+            # Wall jump momentum penalty: holding toward the jumped wall kills the rise
+            if p.wj_rise_wall != 0:
+                if p.on_ground or p.vy >= 0:
+                    p.wj_rise_wall = 0
+                elif adx == p.wj_rise_wall:
+                    p.vy = max(p.vy, JUMP_VEL_MIN)
             p.vy = min(p.vy + GRAVITY, MAX_FALL)
             self._move_x(p)
             self._move_y(p)

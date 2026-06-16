@@ -47,9 +47,11 @@ MAX_FALL      = 4.0
 MOVE_SPEED    = 1.5
 JUMP_VEL      = -4.5
 JUMP_VEL_MIN  = -1.5   # vy floor when jump button released early (variable jump height)
-WALL_JUMP_VEL = -4.0
-WALL_JUMP_HVX = 2.0
-WALL_JUMP_CD  = 24     # frames before same-side wall jump is available again
+WALL_JUMP_VEL    = -4.0
+WALL_JUMP_HVX    = 2.0
+WALL_JUMP_CD     = 24   # frames before same-side wall jump is available again
+WALL_JUMP_WINDOW = 14   # frames after "away" press during which jump triggers wall jump (~0.23 s)
+WALL_JUMP_COYOTE = 8    # frames of coyote wall contact after leaving wall
 P_HIT_INS     = 1      # horizontal inset for floor/ceiling checks
 # fmt: on
 

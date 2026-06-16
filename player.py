@@ -22,8 +22,13 @@ class Player:
         self.hang_wall    = 0        # 1=right, -1=left
         self.jump_type    = "none"   # "none" | "straight" | "spin"
         self.wall_contact = 0        # 1=right, -1=left, 0=none
-        self.wj_cd_l      = 0
-        self.wj_cd_r      = 0
+        self.wj_cd_l         = 0
+        self.wj_cd_r         = 0
+        self.wj_away_window  = 0   # frames remaining to press jump after "away" detected
+        self.wj_away_side    = 0   # wall_contact value when away was pressed (-1/1)
+        self.wj_rise_wall    = 0   # wall jumped from; non-zero during penalised rise
+        self.wj_coyote       = 0   # frames of coyote wall contact remaining
+        self.wj_coyote_side  = 0   # side (-1/1) of last real wall contact
         self.ledge_cd     = 0
         self.burrowing    = False
         self.crouching    = False

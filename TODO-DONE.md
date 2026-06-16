@@ -1,5 +1,9 @@
 # Done
 
+- Metroid Fusion wall jump: press away from wall then jump within 14-frame window; holding back toward wall during rise cuts vy to JUMP_VEL_MIN; 8-frame coyote window so slight drift off wall still registers
+
+- MissileCanister sprite: loaded from assets/img/missilecanister.png at bank 0 (24,0); replaces rectb+glyph draw
+
 - Mysterious Rocket Fin artifact: passive, does nothing alone; synergizes with IceMissile (adjacent in body grid) to explode ice missiles into 8 rotating freeze-on-hit fragments
 
 - Mechaspider Legs artifact: 2D wall climbing with 8 procedural legs; 2-joint shoulders on circle, nearest-face tile anchoring, per-leg stretch unhook, progressive traversal, aim lock, all-4-side surface support

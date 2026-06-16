@@ -3,9 +3,6 @@
 ## Bugs
 <!--None yet.-->
 
-When doing a walljump, it should force you in the other direction just enough so that you can't recover any vertical momentum, unless you go the other direction. Just like in Metroid Fusion.
-- To walljump, you need to press away from the wall you're facing and hit jump again within a short (0.2s) time window.
-
 ## Gameplay
 - Floors / progression (floor counter, difficulty scaling)
 
