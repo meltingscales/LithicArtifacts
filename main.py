@@ -837,6 +837,25 @@ class Game:
             or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_DPAD_DOWN)
         )
 
+        self._tick_player_cooldowns(p)
+
+        inputs = {
+            "left": self._left(),
+            "right": self._right(),
+            "up": self._up(),
+            "down": self._down(),
+            "jump": jump,
+            "shoot": self._shoot(),
+            "burrow": (pyxel.btn(pyxel.KEY_C) or pyxel.btn(pyxel.GAMEPAD1_BUTTON_Y)),
+        }
+        for a in p.artifacts:
+            a.on_frame(p, self.world, inputs)
+
+        self._update_player_movement(p, adx, jump, down_p)
+        self._update_combat(p)
+        self._update_world(p)
+
+    def _tick_player_cooldowns(self, p):
         if p.shoot_cd > 0:
             p.shoot_cd -= 1
         if p.wj_cd_l > 0:
@@ -852,18 +871,7 @@ class Game:
         if p.inv_cd > 0:
             p.inv_cd -= 1
 
-        inputs = {
-            "left": self._left(),
-            "right": self._right(),
-            "up": self._up(),
-            "down": self._down(),
-            "jump": jump,
-            "shoot": self._shoot(),
-            "burrow": (pyxel.btn(pyxel.KEY_C) or pyxel.btn(pyxel.GAMEPAD1_BUTTON_Y)),
-        }
-        for a in p.artifacts:
-            a.on_frame(p, self.world, inputs)
-
+    def _update_player_movement(self, p, adx, jump, down_p):
         if p.state == "hanging":
             p.aim_locked = self._aim_lock()
             if p.aim_locked:
@@ -1067,6 +1075,7 @@ class Game:
             if p.wall_contact == 0 and not p.burrowing:
                 self._probe_walls(p)
 
+    def _update_combat(self, p):
         # Cycle active missile type (SELECT)
         if self._select_btnp():
             self.active_missile_idx += 1
@@ -1191,6 +1200,7 @@ class Game:
         self.missile_bullets = [mb for mb in self.missile_bullets if mb.alive]
         self.ice_fragments = [f for f in self.ice_fragments if f.alive]
 
+    def _update_world(self, p):
         # Drain world spawn queue
         for sx, sy, etype in self.world.pending_spawns:
             if etype == "crawler":
