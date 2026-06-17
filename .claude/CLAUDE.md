@@ -31,6 +31,7 @@ These are not documented intentionally. Keep it as brief as possible so the play
 
 - Do we need to split up any large modules?
 - From `artifacts.py`, what cool synergies can we add?
+- Is there anything from `just radon` or `just pylint` we should focus on?
 
 ### Art
 
