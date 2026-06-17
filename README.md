@@ -58,7 +58,7 @@ assets/:      Asset generation scripts and audio/image assets
 
 | Thing | Scope |
 |---|---|
-| Dungeon floors | 5–10 |
+| Biomechanical Dungeon floors | 5–10 |
 | Enemy types | ~10 |
 | Artifacts | ~30–40 |
 | Documented synergies | Few |

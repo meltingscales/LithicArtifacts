@@ -25,7 +25,7 @@ See `README.md` and `DESIGN-DECISIONS.md` for locked decisions.
 - `_is_traversable` now two-pass: Pass 1 finds all reachable states; Pass 2 verifies every reachable grounded state can also reach the section bottom (catches side-pocket soft-locks)
 - `world.tiles`: `{(col, row): tile_type}` — 1 = platform, 2 = cave rock
 - `world.solid()` checks `!= 0`; `world.destroy()` removes tiles
-- Biome system: 5 biomes (Dungeon→Caverns→Abyss→Depths→Inferno), cycle every 6 sections; "ENTERING [NAME]" banner on transition (5s cooldown)
+- Biome system: 5 biomes (Biomechanical Dungeon→Caverns→Abyss→Depths→Inferno), cycle every 6 sections; "ENTERING [NAME]" banner on transition (5s cooldown)
 
 ### Player (`main.py: Player`)
 - 2 tiles tall (`@`/`W` glyphs), full Metroid Fusion-style movement

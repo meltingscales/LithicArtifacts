@@ -32,7 +32,7 @@ BROWN      = 4
 
 _BIOMES = [
     # name        bg  wall_fill  wall_brd  cave_fill  cave_brd
-    ("Dungeon",    0,     5,        6,        4,          5),
+    ("Biomechanical Dungeon",    0,     5,        6,        4,          5),
     ("Caverns",    1,     5,        6,       13,          1),
     ("Abyss",      2,    13,        6,        1,         13),
     ("Depths",     3,     3,       11,        3,          6),
@@ -89,9 +89,12 @@ class Game:
     def __init__(self):
         pyxel.init(SCREEN_W, SCREEN_H, title="Lithic Artifacts", fps=60)
         # Sprites — bank 0, (0,0): 16×8 flyer; (16,0): 8×8 VampiricCape; (24,0): 8×8 MissileCanister
+        #           (32,0): 8×8 tile-biomech-center; (40,0): 8×8 tile-biomech-platform
         pyxel.images[0].load(0, 0, "assets/img/flyer.png")
         pyxel.images[0].load(16, 0, "assets/img/VampiricCape.png")
         pyxel.images[0].load(24, 0, "assets/img/missilecanister.png")
+        pyxel.images[0].load(32, 0, "assets/img/tile-biomech-center.png")
+        pyxel.images[0].load(40, 0, "assets/img/tile-biomech-platform.png")
         # Sound 0: flyer spawn buzz (short descending triangle)
         pyxel.sounds[0].set("e3d3c3", "t", "543", "nnn", 10)
         # Sound 1: flyer shoot (noise burst with fadeout)
@@ -1365,10 +1368,15 @@ class Game:
                 if ttype != 0:
                     sx = col * TILE
                     sy = int(row * TILE - cam)
-                    _, _, wf, wb, cf, cb = _BIOMES[biome_for_row(row)]
+                    bidx = biome_for_row(row)
+                    _, _, wf, wb, cf, cb = _BIOMES[bidx]
                     if ttype == 2:  # cave rock
                         pyxel.rect(sx, sy, TILE, TILE, cf)
                         pyxel.rectb(sx, sy, TILE, TILE, cb)
+                    elif bidx == 0:  # Biomechanical Dungeon — sprite tiles
+                        is_platform = self.world.tiles.get((col, row - 1), 0) == 0
+                        spr_x = 40 if is_platform else 32
+                        pyxel.blt(sx, sy, 0, spr_x, 0, TILE, TILE, 0)
                     else:  # platform / side wall (type 1)
                         pyxel.rect(sx, sy, TILE, TILE, wf)
                         pyxel.rectb(sx, sy, TILE, TILE, wb)
