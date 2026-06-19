@@ -152,23 +152,11 @@ class Game:
 
     def _update_debug(self):
         n = len(DEBUG_ITEMS)
-        if (
-            pyxel.btnp(pyxel.KEY_UP)
-            or pyxel.btnp(pyxel.KEY_K)
-            or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_DPAD_UP)
-        ):
+        if self._up_p():
             self.debug_cursor = (self.debug_cursor - 1) % n
-        if (
-            pyxel.btnp(pyxel.KEY_DOWN)
-            or pyxel.btnp(pyxel.KEY_J)
-            or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_DPAD_DOWN)
-        ):
+        if self._down_p():
             self.debug_cursor = (self.debug_cursor + 1) % n
-        if (
-            pyxel.btnp(pyxel.KEY_Z)
-            or pyxel.btnp(pyxel.KEY_RETURN)
-            or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_A)
-        ):
+        if self._act_p():
             _, cls = DEBUG_ITEMS[self.debug_cursor]
             if isinstance(cls, _Restart):
                 self._full_reset(cls.seed)
@@ -194,11 +182,7 @@ class Game:
                     self._sync_artifacts()
                 else:
                     self.inventory.append(cls())
-        if (
-            pyxel.btnp(pyxel.KEY_ESCAPE)
-            or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_B)
-            or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_START)
-        ):
+        if self._cancel_p():
             self.debug_open = False
 
     def _draw_debug(self):
@@ -221,12 +205,7 @@ class Game:
             if cls is None:
                 has = self.immortal
             else:
-                has = any(isinstance(a, cls) for a in self.inventory) or any(
-                    isinstance(self.body_grid[r][c], cls)
-                    for r in range(5)
-                    for c in range(5)
-                    if self.body_grid[r][c] is not None
-                )
+                has = self._has_artifact(cls)
             marker = "[x]" if has else "[ ]"
             pyxel.text(px0 + 4, py0 + 14 + i * 10, f"{cursor} {marker} {label}", color)
 
@@ -322,27 +301,25 @@ class Game:
         self.held = None
         self.held_src = None
 
-    def _cancel_hold(self):
-        src, *pos = self.held_src
-        if src == "body":
+    def _put_at(self, artifact, src):
+        """Place artifact at a src tuple ("body", r, c) or ("inv", i)."""
+        kind, *pos = src
+        if kind == "body":
             r, c = pos
-            self.body_grid[r][c] = self.held
-            self._sync_artifacts()
+            self.body_grid[r][c] = artifact
         else:
-            i = pos[0]
-            self.inventory.insert(min(i, len(self.inventory)), self.held)
+            self.inventory.insert(min(pos[0], len(self.inventory)), artifact)
+
+    def _cancel_hold(self):
+        self._put_at(self.held, self.held_src)
+        if self.held_src[0] == "body":
+            self._sync_artifacts()
         self.held = None
         self.held_src = None
 
     def _return_to_src(self, artifact):
         """Send a displaced artifact back to where the held item came from."""
-        src, *pos = self.held_src
-        if src == "body":
-            r, c = pos
-            self.body_grid[r][c] = artifact
-        else:
-            i = pos[0]
-            self.inventory.insert(min(i, len(self.inventory)), artifact)
+        self._put_at(artifact, self.held_src)
 
     # -- update / draw --
 
@@ -357,42 +334,18 @@ class Game:
             return
 
         # Escape / Start / B: cancel hold or close menu
-        if (
-            pyxel.btnp(pyxel.KEY_ESCAPE)
-            or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_START)
-            or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_B)
-        ):
+        if self._cancel_p():
             if self.held:
                 self._cancel_hold()
             else:
                 self.paused = False
             return
 
-        up = (
-            pyxel.btnp(pyxel.KEY_UP)
-            or pyxel.btnp(pyxel.KEY_K)
-            or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_DPAD_UP)
-        )
-        down = (
-            pyxel.btnp(pyxel.KEY_DOWN)
-            or pyxel.btnp(pyxel.KEY_J)
-            or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_DPAD_DOWN)
-        )
-        left = (
-            pyxel.btnp(pyxel.KEY_LEFT)
-            or pyxel.btnp(pyxel.KEY_H)
-            or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_DPAD_LEFT)
-        )
-        rght = (
-            pyxel.btnp(pyxel.KEY_RIGHT)
-            or pyxel.btnp(pyxel.KEY_L)
-            or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT)
-        )
-        act = (
-            pyxel.btnp(pyxel.KEY_Z)
-            or pyxel.btnp(pyxel.KEY_RETURN)
-            or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_A)
-        )
+        up   = self._up_p()
+        down = self._down_p()
+        left = self._left_p()
+        rght = self._right_p()
+        act  = self._act_p()
 
         if self.pause_panel == 0:  # body grid
             r, c = self.body_cursor
@@ -557,6 +510,34 @@ class Game:
             or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT)
         )
 
+    def _up_p(self):
+        return (
+            pyxel.btnp(pyxel.KEY_UP)
+            or pyxel.btnp(pyxel.KEY_K)
+            or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_DPAD_UP)
+        )
+
+    def _down_p(self):
+        return (
+            pyxel.btnp(pyxel.KEY_DOWN)
+            or pyxel.btnp(pyxel.KEY_J)
+            or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_DPAD_DOWN)
+        )
+
+    def _act_p(self):
+        return (
+            pyxel.btnp(pyxel.KEY_Z)
+            or pyxel.btnp(pyxel.KEY_RETURN)
+            or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_A)
+        )
+
+    def _cancel_p(self):
+        return (
+            pyxel.btnp(pyxel.KEY_ESCAPE)
+            or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_B)
+            or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_START)
+        )
+
     def _up(self):
         return (
             pyxel.btn(pyxel.KEY_UP)
@@ -604,6 +585,25 @@ class Game:
     def _maybe_drop_canister(self, e):
         if random.random() < CANISTER_DROP_CHANCE:
             self.canisters.append(MissileCanister(e.x, e.y))
+
+    def _overlaps(self, a, b):
+        """AABB test — both objects must have .x/.y/.right/.bottom."""
+        return a.x < b.right and a.right > b.x and a.y < b.bottom and a.bottom > b.y
+
+    def _hit(self, bx, by, size, target):
+        """AABB test for a square projectile at (bx,by) of given pixel size vs target."""
+        return bx < target.right and bx + size > target.x and by < target.bottom and by + size > target.y
+
+    def _has_artifact(self, cls):
+        """True if cls is equipped in body_grid or sitting in inventory."""
+        return (
+            any(isinstance(a, cls) for a in self.inventory)
+            or any(
+                isinstance(self.body_grid[r][c], cls)
+                for r in range(5) for c in range(5)
+                if self.body_grid[r][c] is not None
+            )
+        )
 
     def _active_missile(self):
         missiles = [a for a in self.player.artifacts if isinstance(a, MissileArtifact)]
@@ -1142,7 +1142,7 @@ class Game:
                     continue
                 if hit_enemies is not None and id(e) in hit_enemies:
                     continue
-                if b.x < e.right and b.x + 2 > e.x and b.y < e.bottom and b.y + 2 > e.y:
+                if self._hit(b.x, b.y, 2, e):
                     e.take_damage(FractalBullet.DAMAGE if piercing else 1)
                     if not e.alive:
                         for a in p.artifacts:
@@ -1160,12 +1160,7 @@ class Game:
             if not mb.alive:
                 continue
             for e in self.enemies:
-                if e.alive and (
-                    mb.x < e.right
-                    and mb.x + 3 > e.x
-                    and mb.y < e.bottom
-                    and mb.y + 3 > e.y
-                ):
+                if e.alive and self._hit(mb.x, mb.y, 3, e):
                     e.take_damage(MissileBullet.DAMAGE)
                     e.frozen_timer = MissileBullet.FREEZE_FRAMES
                     if not e.alive:
@@ -1184,12 +1179,7 @@ class Game:
             if not frag.alive:
                 continue
             for e in self.enemies:
-                if e.alive and (
-                    frag.x < e.right
-                    and frag.x + 2 > e.x
-                    and frag.y < e.bottom
-                    and frag.y + 2 > e.y
-                ):
+                if e.alive and self._hit(frag.x, frag.y, 2, e):
                     e.take_damage(IceFragment.DAMAGE)
                     e.frozen_timer = IceFragment.FREEZE_FRAMES
                     if not e.alive:
@@ -1233,27 +1223,13 @@ class Game:
         # Damage player (enemy contact, then enemy bullets; one source per inv window)
         if p.inv_cd == 0 and not self.immortal:
             for e in self.enemies:
-                if (
-                    e.alive
-                    and e.frozen_timer == 0
-                    and (
-                        p.x < e.right
-                        and p.right > e.x
-                        and p.y < e.bottom
-                        and p.bottom > e.y
-                    )
-                ):
+                if e.alive and e.frozen_timer == 0 and self._overlaps(p, e):
                     p.hp = max(0, p.hp - e.damage)
                     p.inv_cd = 60
                     break
             else:
                 for eb in self.enemy_bullets:
-                    if eb.alive and (
-                        p.x < eb.x + 2
-                        and p.right > eb.x
-                        and p.y < eb.y + 2
-                        and p.bottom > eb.y
-                    ):
+                    if eb.alive and self._hit(eb.x, eb.y, 2, p):
                         p.hp = max(0, p.hp - 1)
                         p.inv_cd = 60
                         eb.alive = False
@@ -1264,12 +1240,7 @@ class Game:
 
         # Pickup collection
         for pu in self.world.pickups:
-            if not pu.collected and (
-                p.x < pu.right
-                and p.right > pu.x
-                and p.y < pu.bottom
-                and p.bottom > pu.y
-            ):
+            if not pu.collected and self._overlaps(p, pu):
                 pu.collected = True
                 self.inventory.append(pu.artifact_cls())
                 self.pickup_dialogue = pu.artifact_cls
@@ -1279,9 +1250,7 @@ class Game:
         for c in self.canisters:
             c.update()
         for c in self.canisters:
-            if c.alive and (
-                p.x < c.right and p.right > c.x and p.y < c.bottom and p.bottom > c.y
-            ):
+            if c.alive and self._overlaps(p, c):
                 missiles = [a for a in p.artifacts if isinstance(a, MissileArtifact)]
                 if missiles:
                     target = min(missiles, key=lambda a: a.ammo / a.max_ammo)
