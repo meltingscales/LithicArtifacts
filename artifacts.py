@@ -412,7 +412,7 @@ class FractalBlaster(Artifact):
         if self.bg_timer > 0:
             self.bg_timer -= 1
 
-    def draw_bg(self):
+    def draw_bg(self, biome_bg=0):
         if self.bg_timer <= 0:
             return
         import numpy as np
@@ -436,14 +436,21 @@ class FractalBlaster(Artifact):
             self._cache = iters
             self._cache_tick = self._t
 
+        # Pick fractal colors that don't match the biome background
+        # fmt: off
+        if   biome_bg == 2: in_set_col, near_col = 1, 5   # Abyss (bg=purple): use navy + dark blue-gray
+        elif biome_bg == 1: in_set_col, near_col = 2, 5   # Caverns (bg=navy): use purple + dark blue-gray
+        else:               in_set_col, near_col = 2, 1   # default: dark purple + navy
+        # fmt: on
+
         alpha = min(self.bg_timer / self.BG_LIFETIME, 0.5)
         pyxel.dither(alpha)
         S = 8
         for ry in range(20):
             for rx in range(30):
                 n = int(self._cache[ry, rx])
-                if n == 20:  # in-set: dark purple
-                    pyxel.rect(rx * S, ry * S, S, S, 2)
-                elif n >= 13:  # near-boundary: navy
-                    pyxel.rect(rx * S, ry * S, S, S, 1)
+                if n == 20:       # in-set
+                    pyxel.rect(rx * S, ry * S, S, S, in_set_col)
+                elif n >= 13:     # near-boundary
+                    pyxel.rect(rx * S, ry * S, S, S, near_col)
         pyxel.dither(1.0)

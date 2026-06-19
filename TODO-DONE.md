@@ -1,5 +1,7 @@
 # Done
 
+- Bug: FractalBlaster bg invisible on Abyss/Caverns — draw_bg now receives biome_bg color and swaps fractal colors to avoid matching the background
+
 - Metroid Fusion wall jump: press away from wall then jump within 14-frame window; holding back toward wall during rise cuts vy to JUMP_VEL_MIN; 8-frame coyote window so slight drift off wall still registers
 
 - MissileCanister sprite: loaded from assets/img/missilecanister.png at bank 0 (24,0); replaces rectb+glyph draw

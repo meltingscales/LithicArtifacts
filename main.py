@@ -1353,7 +1353,7 @@ class Game:
         # Fractal Blaster background overlay (dithered, drawn above tiles but below entities)
         for a in self.player.artifacts:
             if isinstance(a, FractalBlaster):
-                a.draw_bg()
+                a.draw_bg(_BIOMES[cam_biome][1])
                 break
 
         for b in self.bullets:
