@@ -6,6 +6,7 @@
 - GIMP
   - Use "None" for interpolation - this is the same as "Nearest Neighbor".
 - `sudo pacman -S kcolorchooser`
+- `./localai-pixel-art/`
 
 ### Sites for generating art
 

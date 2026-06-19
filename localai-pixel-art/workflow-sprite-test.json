@@ -1,0 +1,77 @@
+{
+  "1": {
+    "inputs": {
+      "ckpt_name": "PixelartSpritesheet_V.1.ckpt"
+    },
+    "class_type": "CheckpointLoaderSimple",
+    "_meta": { "title": "Load Checkpoint" }
+  },
+  "2": {
+    "inputs": {
+      "lora_name": "PixelArtRedmond-Lite64.safetensors",
+      "strength_model": 0.75,
+      "strength_clip": 0.75,
+      "model": ["1", 0],
+      "clip":  ["1", 1]
+    },
+    "class_type": "LoraLoader",
+    "_meta": { "title": "LoRA — PixelArtRedmond" }
+  },
+  "3": {
+    "inputs": {
+      "text": "pixel art, 8x8 game sprite, biomechanical dungeon tile, metal rivets over wet muscle, dark purple-gray fill, bioluminescent cracks, GBA game, PixelartSpritesheet, PixelArtRedmond, retro sprite sheet, hard pixel edges, no anti-aliasing, limited color palette, black background",
+      "clip": ["2", 1]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": { "title": "Positive Prompt" }
+  },
+  "4": {
+    "inputs": {
+      "text": "blurry, gradient, smooth edges, anti-aliasing, photorealistic, 3D render, noise, watermark, text, high detail, photograph, painting, dithering, glow",
+      "clip": ["2", 1]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": { "title": "Negative Prompt" }
+  },
+  "5": {
+    "inputs": {
+      "width": 64,
+      "height": 64,
+      "batch_size": 8
+    },
+    "class_type": "EmptyLatentImage",
+    "_meta": { "title": "Latent — 64x64 (→ 8x8 after quantize)" }
+  },
+  "6": {
+    "inputs": {
+      "seed": 42,
+      "steps": 25,
+      "cfg": 7.0,
+      "sampler_name": "dpm_2m",
+      "scheduler": "karras",
+      "denoise": 1.0,
+      "model":        ["2", 0],
+      "positive":     ["3", 0],
+      "negative":     ["4", 0],
+      "latent_image": ["5", 0]
+    },
+    "class_type": "KSampler",
+    "_meta": { "title": "KSampler" }
+  },
+  "7": {
+    "inputs": {
+      "samples": ["6", 0],
+      "vae":     ["1", 2]
+    },
+    "class_type": "VAEDecode",
+    "_meta": { "title": "VAE Decode" }
+  },
+  "8": {
+    "inputs": {
+      "filename_prefix": "lithic_sprite",
+      "images": ["7", 0]
+    },
+    "class_type": "SaveImage",
+    "_meta": { "title": "Save — lithic_sprite_XXXXX.png" }
+  }
+}
