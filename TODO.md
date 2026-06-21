@@ -48,7 +48,10 @@ None yet.
 
 - Add UI scrolling to the debug menu (as it will grow too large eventually)
 
-- Set up steam packaging and GitHub CICD
+- Set up GitHub CICD
+  - should release a windows, linux, and macos version using pyinstaller
+
+- set up steam packaging
   - For a working example, see CICD and scripts in ~/Git/LithicRivers.
 
 

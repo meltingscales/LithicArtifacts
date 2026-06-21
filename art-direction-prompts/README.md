@@ -12,6 +12,8 @@
 
 - <https://www.pixellab.ai/>
 - Nano Banana
+- [pixie.haus](https://pixie.haus/)
+- <https://www.sprite-ai.art/studio/ai-generator>
 
 ## Workflow
 
