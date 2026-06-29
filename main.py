@@ -60,9 +60,12 @@ _TIPY = 131  # tooltip divider y
 _HOVER = 180 # frames of hover before description appears (3 s @ 60 fps)
 # fmt: on
 
+
 class _Restart:
     """Sentinel for debug-menu entries that trigger a full game reset."""
-    def __init__(self, seed): self.seed = seed
+
+    def __init__(self, seed):
+        self.seed = seed
 
 
 # fmt: off
@@ -87,7 +90,13 @@ DEBUG_ITEMS = [
 
 class Game:
     def __init__(self):
-        pyxel.init(SCREEN_W, SCREEN_H, title="Lithic Artifacts", fps=60)
+        pyxel.init(
+            SCREEN_W,
+            SCREEN_H,
+            title="Lithic Artifacts",
+            fps=60,
+            quit_key=pyxel.KEY_NONE,
+        )
         # Sprites — bank 0, (0,0): 16×8 flyer; (16,0): 8×8 VampiricCape; (24,0): 8×8 MissileCanister
         #           (32,0): 8×8 tile-biomech-center; (40,0): 8×8 tile-biomech-platform
         pyxel.images[0].load(0, 0, "assets/img/flyer.png")
@@ -182,7 +191,11 @@ class Game:
                     self._sync_artifacts()
                 else:
                     self.inventory.append(cls())
-        if self._cancel_p():
+        if (
+            pyxel.btnp(pyxel.GAMEPAD1_BUTTON_B)
+            or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_START)
+            or pyxel.btnp(pyxel.KEY_F1)
+        ):
             self.debug_open = False
 
     def _draw_debug(self):
@@ -195,10 +208,10 @@ class Game:
         pyxel.rect(px0, py0, pw, ph, BLACK)
         pyxel.rectb(px0, py0, pw, ph, LIGHT_GRAY)
         pyxel.text(px0 + 4, py0 + 4, "-- DEBUG --", YELLOW)
-        pyxel.text(px0 + 60, py0 + 4, "Z/A:toggle  Esc/B:close", DARK_GRAY)
+        pyxel.text(px0 + 60, py0 + 4, "Z/A:toggle  F1/B:close", DARK_GRAY)
         for i, (label, cls) in enumerate(DEBUG_ITEMS):
             cursor = ">" if i == self.debug_cursor else " "
-            color  = YELLOW if i == self.debug_cursor else LIGHT_GRAY
+            color = YELLOW if i == self.debug_cursor else LIGHT_GRAY
             if isinstance(cls, _Restart):
                 pyxel.text(px0 + 4, py0 + 14 + i * 10, f"{cursor} >>  {label}", color)
                 continue
@@ -341,11 +354,11 @@ class Game:
                 self.paused = False
             return
 
-        up   = self._up_p()
+        up = self._up_p()
         down = self._down_p()
         left = self._left_p()
         rght = self._right_p()
-        act  = self._act_p()
+        act = self._act_p()
 
         if self.pause_panel == 0:  # body grid
             r, c = self.body_cursor
@@ -423,8 +436,8 @@ class Game:
         half = (_CELL - 1) // 2
         pulse = 0.4 + 0.6 * ((pyxel.frame_count // 8) % 2)
         for r, c, nr, nc, col in all_synergy_pairs(self.body_grid):
-            ax = _GX + c  * _CELL + half
-            ay = _GY + r  * _CELL + half
+            ax = _GX + c * _CELL + half
+            ay = _GY + r * _CELL + half
             bx = _GX + nc * _CELL + half
             by = _GY + nr * _CELL + half
             pyxel.dither(pulse)
@@ -592,17 +605,20 @@ class Game:
 
     def _hit(self, bx, by, size, target):
         """AABB test for a square projectile at (bx,by) of given pixel size vs target."""
-        return bx < target.right and bx + size > target.x and by < target.bottom and by + size > target.y
+        return (
+            bx < target.right
+            and bx + size > target.x
+            and by < target.bottom
+            and by + size > target.y
+        )
 
     def _has_artifact(self, cls):
         """True if cls is equipped in body_grid or sitting in inventory."""
-        return (
-            any(isinstance(a, cls) for a in self.inventory)
-            or any(
-                isinstance(self.body_grid[r][c], cls)
-                for r in range(5) for c in range(5)
-                if self.body_grid[r][c] is not None
-            )
+        return any(isinstance(a, cls) for a in self.inventory) or any(
+            isinstance(self.body_grid[r][c], cls)
+            for r in range(5)
+            for c in range(5)
+            if self.body_grid[r][c] is not None
         )
 
     def _active_missile(self):
@@ -664,8 +680,9 @@ class Game:
                 if any(self.world.solid(wall_col, tr + i) for i in range(ph_rows)):
                     continue  # gap not clear at this offset
                 # Require solid wall tiles framing the gap above and below
-                if (self.world.solid(wall_col, tr - 1)
-                        and self.world.solid(wall_col, tr + ph_rows)):
+                if self.world.solid(wall_col, tr - 1) and self.world.solid(
+                    wall_col, tr + ph_rows
+                ):
                     p.y += sign * dy
                     return True
         return False
@@ -907,7 +924,11 @@ class Game:
             if jump:
                 # Jump away from wall using stored wall side
                 wall_side = next(
-                    (a._wall_side for a in p.artifacts if isinstance(a, MechaspiderLegs)),
+                    (
+                        a._wall_side
+                        for a in p.artifacts
+                        if isinstance(a, MechaspiderLegs)
+                    ),
                     p.wall_contact,
                 )
                 p.climbing = False
@@ -1023,7 +1044,7 @@ class Game:
 
             # Coyote wall contact: maintain effective wall side briefly after leaving wall
             if p.wall_contact != 0:
-                p.wj_coyote      = WALL_JUMP_COYOTE
+                p.wj_coyote = WALL_JUMP_COYOTE
                 p.wj_coyote_side = p.wall_contact
             eff_wall = p.wall_contact or (p.wj_coyote_side if p.wj_coyote > 0 else 0)
 
@@ -1031,9 +1052,9 @@ class Game:
             # jump must be pressed within that window to execute the wall jump.
             if eff_wall != 0 and not p.on_ground:
                 adx_p = (-1 if self._left_p() else 0) + (1 if self._right_p() else 0)
-                if adx_p == -eff_wall:   # just pressed the away direction
+                if adx_p == -eff_wall:  # just pressed the away direction
                     p.wj_away_window = WALL_JUMP_WINDOW
-                    p.wj_away_side   = eff_wall
+                    p.wj_away_side = eff_wall
 
             if (
                 jump and not p.burrowing and not p.crouching
@@ -1045,19 +1066,17 @@ class Game:
                     if p.jump_type == "straight":
                         p.vx = 0.0
                 elif eff_wall != 0:
-                    can_cd  = (eff_wall == -1 and p.wj_cd_l == 0) or (
+                    can_cd = (eff_wall == -1 and p.wj_cd_l == 0) or (
                         eff_wall == 1 and p.wj_cd_r == 0
                     )
-                    in_window = (
-                        p.wj_away_window > 0 and p.wj_away_side == eff_wall
-                    )
+                    in_window = p.wj_away_window > 0 and p.wj_away_side == eff_wall
                     if can_cd and in_window:
-                        p.vy             = WALL_JUMP_VEL
-                        p.vx             = -eff_wall * WALL_JUMP_HVX
-                        p.jump_type      = "spin"
-                        p.wj_rise_wall   = eff_wall   # track for momentum penalty
+                        p.vy = WALL_JUMP_VEL
+                        p.vx = -eff_wall * WALL_JUMP_HVX
+                        p.jump_type = "spin"
+                        p.wj_rise_wall = eff_wall  # track for momentum penalty
                         p.wj_away_window = 0
-                        p.wj_coyote      = 0
+                        p.wj_coyote = 0
                         if eff_wall == -1:
                             p.wj_cd_l = WALL_JUMP_CD
                         else:
@@ -1092,7 +1111,9 @@ class Game:
                 art = self._active_missile()
                 if art and art.ammo > 0:
                     mb = MissileBullet(p.gun_x, p.gun_y, dx, dy)
-                    mb.synergy_ice_burst = isinstance(art, IceMissile) and rocketfin_ice_active(self.body_grid)
+                    mb.synergy_ice_burst = isinstance(
+                        art, IceMissile
+                    ) and rocketfin_ice_active(self.body_grid)
                     for a in p.artifacts:
                         a.on_shoot(p, mb)
                     self.missile_bullets.append(mb)

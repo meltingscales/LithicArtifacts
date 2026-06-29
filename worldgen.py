@@ -22,9 +22,17 @@ from collections import deque
 import noise as _noise
 
 from constants import (
-    COLS, SECTION_H, CORRIDOR_MIN_FREE, BFS_JUMP_H, CAVE_MAX_RETRIES,
-    STYPE_WEIGHTS, PLAT_DENSITY_PLATFORMS, PLAT_DENSITY_OPEN,
-    PLAT_DENSITY_CAVE_FALLBACK, SPAWN_DENSITY_PLATFORMS, SPAWN_DENSITY_DEFAULT,
+    COLS,
+    SECTION_H,
+    CORRIDOR_MIN_FREE,
+    BFS_JUMP_H,
+    CAVE_MAX_RETRIES,
+    STYPE_WEIGHTS,
+    PLAT_DENSITY_PLATFORMS,
+    PLAT_DENSITY_OPEN,
+    PLAT_DENSITY_CAVE_FALLBACK,
+    SPAWN_DENSITY_PLATFORMS,
+    SPAWN_DENSITY_DEFAULT,
 )
 
 
@@ -86,9 +94,13 @@ def gen_section(rng, abs_start_row, entry_free_l, entry_free_r, artifact_cls=Non
         # fmt: on
 
     if stype == "platforms":
-        _gen_platforms(rng, tiles, abs_start_row, free_l, free_r, density=PLAT_DENSITY_PLATFORMS)
+        _gen_platforms(
+            rng, tiles, abs_start_row, free_l, free_r, density=PLAT_DENSITY_PLATFORMS
+        )
     elif stype == "open":
-        _gen_platforms(rng, tiles, abs_start_row, free_l, free_r, density=PLAT_DENSITY_OPEN)
+        _gen_platforms(
+            rng, tiles, abs_start_row, free_l, free_r, density=PLAT_DENSITY_OPEN
+        )
     elif stype == "cave":
         for attempt in range(CAVE_MAX_RETRIES):
             cave_tiles = {}
@@ -98,7 +110,14 @@ def gen_section(rng, abs_start_row, entry_free_l, entry_free_r, artifact_cls=Non
                 break
         else:
             # All retries failed — fall back to an open section
-            _gen_platforms(rng, tiles, abs_start_row, free_l, free_r, density=PLAT_DENSITY_CAVE_FALLBACK)
+            _gen_platforms(
+                rng,
+                tiles,
+                abs_start_row,
+                free_l,
+                free_r,
+                density=PLAT_DENSITY_CAVE_FALLBACK,
+            )
     else:  # chamber
         _gen_chamber(rng, tiles, abs_start_row, free_l, free_r)
 

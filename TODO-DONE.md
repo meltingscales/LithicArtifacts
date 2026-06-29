@@ -1,5 +1,6 @@
 # Done
 
+- Bug: ESC closed game AND menus — disabled pyxel default ESC quit (`quit_key=KEY_NONE`); debug menu now closes with F1/B/Start only; ESC reserved for pause menu cancel/close
 - Bug: FractalBlaster bg invisible on Abyss/Caverns — draw_bg now receives biome_bg color and swaps fractal colors to avoid matching the background
 
 - Metroid Fusion wall jump: press away from wall then jump within 14-frame window; holding back toward wall during rise cuts vy to JUMP_VEL_MIN; 8-frame coyote window so slight drift off wall still registers

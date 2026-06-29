@@ -13,6 +13,7 @@ Batch (all PNGs in a directory → assets/img/):
         python quantize_sprite.py "$f" "../assets/img/$(basename $f)" --size 8x8
     done
 """
+
 import argparse
 import sys
 from pathlib import Path
@@ -52,23 +53,27 @@ _PAL_ARRAY = np.array(PYXEL_PALETTE, dtype=np.int32)  # (16, 3)
 def quantize(img: "Image.Image", target_w: int, target_h: int) -> "Image.Image":
     # Nearest-neighbor downscale — preserves hard pixel edges
     img = img.convert("RGB").resize((target_w, target_h), Image.NEAREST)
-    arr = np.array(img, dtype=np.int32)          # (H, W, 3)
-    flat = arr.reshape(-1, 3)                    # (N, 3)
+    arr = np.array(img, dtype=np.int32)  # (H, W, 3)
+    flat = arr.reshape(-1, 3)  # (N, 3)
     # Squared Euclidean distance to each palette entry
     diffs = flat[:, None, :] - _PAL_ARRAY[None, :, :]  # (N, 16, 3)
-    dists = (diffs ** 2).sum(axis=2)             # (N, 16)
-    nearest = dists.argmin(axis=1)               # (N,)
+    dists = (diffs**2).sum(axis=2)  # (N, 16)
+    nearest = dists.argmin(axis=1)  # (N,)
     quantized = _PAL_ARRAY[nearest].reshape(target_h, target_w, 3)
     return Image.fromarray(quantized.astype(np.uint8), "RGB")
 
 
 def main():
-    parser = argparse.ArgumentParser(description=__doc__,
-                                     formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("input",  type=Path, help="Source PNG (AI-generated)")
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    parser.add_argument("input", type=Path, help="Source PNG (AI-generated)")
     parser.add_argument("output", type=Path, help="Destination PNG")
-    parser.add_argument("--size", default="8x8",
-                        help="Target WxH in pixels (default: 8x8). Examples: 8x8, 16x8, 8x16")
+    parser.add_argument(
+        "--size",
+        default="8x8",
+        help="Target WxH in pixels (default: 8x8). Examples: 8x8, 16x8, 8x16",
+    )
     args = parser.parse_args()
 
     if not args.input.exists():

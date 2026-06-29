@@ -16,7 +16,7 @@ import pyxel
 from constants import TILE as _TILE, SCREEN_H as _SCREEN_H, ICE_MISSILE_MAX_AMMO
 # fmt: on
 
-_P_H = _TILE * 2   # player height in pixels (2 tiles)
+_P_H = _TILE * 2  # player height in pixels (2 tiles)
 
 
 class Artifact:
@@ -237,10 +237,10 @@ class MechaspiderLegs(Artifact):
                     continue
                 x0, y0, hT = c * _TILE, r * _TILE, _TILE * 0.5
                 for fx, fy in (
-                    (x0,          y0 + hT),   # left face
-                    (x0 + _TILE,  y0 + hT),   # right face
-                    (x0 + hT,     y0),         # top face
-                    (x0 + hT,     y0 + _TILE), # bottom face
+                    (x0, y0 + hT),  # left face
+                    (x0 + _TILE, y0 + hT),  # right face
+                    (x0 + hT, y0),  # top face
+                    (x0 + hT, y0 + _TILE),  # bottom face
                 ):
                     dist = math.sqrt((fx - shoulder_x) ** 2 + (fy - preferred_y) ** 2)
                     if dist < best_dist and dist <= max_reach:
@@ -260,7 +260,12 @@ class MechaspiderLegs(Artifact):
         for i in range(self._N_LEGS):
             if self._foot_anchored[i]:
                 fx, fy = self._feet[i]
-                if math.sqrt((fx - shoulder_x) ** 2 + (fy - (player.y + _P_H * 0.5)) ** 2) <= max_reach:
+                if (
+                    math.sqrt(
+                        (fx - shoulder_x) ** 2 + (fy - (player.y + _P_H * 0.5)) ** 2
+                    )
+                    <= max_reach
+                ):
                     return True
         # Fallback: within reach of the initial wall
         return abs(shoulder_x - self._grip_edge_x) <= max_reach
@@ -303,7 +308,7 @@ class MechaspiderLegs(Artifact):
 
             # Unhook if leg is stretched beyond max length — snap to preferred
             if self._foot_anchored[i]:
-                shoulder_y = pref_y   # shoulder y ≈ preferred y for this leg
+                shoulder_y = pref_y  # shoulder y ≈ preferred y for this leg
                 leg_len = math.sqrt((fx - shoulder_x) ** 2 + (fy - shoulder_y) ** 2)
                 if leg_len > self._MAX_LEG_LEN:
                     self._feet[i] = (pref_x, pref_y)
@@ -314,9 +319,12 @@ class MechaspiderLegs(Artifact):
             # Mid-step: interpolate; cancel early if target became stale
             if self._step_timer[i] > 0:
                 tx, ty = self._step_to[i]
-                stale = math.sqrt((tx - pref_x) ** 2 + (ty - pref_y) ** 2) > self._STEP_DIST * 2
+                stale = (
+                    math.sqrt((tx - pref_x) ** 2 + (ty - pref_y) ** 2)
+                    > self._STEP_DIST * 2
+                )
                 if stale:
-                    self._step_timer[i] = 0   # fall through to replant below
+                    self._step_timer[i] = 0  # fall through to replant below
                 else:
                     self._step_timer[i] -= 1
                     t = 1.0 - self._step_timer[i] / self._STEP_FRAMES
@@ -350,7 +358,7 @@ class MechaspiderLegs(Artifact):
         # 8 evenly-spaced angles for shoulder attachment points
         _ANGLES = [math.tau * i / self._N_LEGS for i in range(self._N_LEGS)]
         # fmt: on
-        body_sx = player.x + _TILE * 0.5       # body center x
+        body_sx = player.x + _TILE * 0.5  # body center x
         body_sy = player.y + _P_H * 0.5 - cam  # body center y (screen)
 
         for i in range(self._N_LEGS):
@@ -368,12 +376,14 @@ class MechaspiderLegs(Artifact):
             mid_sy = (shoulder_sy + foot_sy) * 0.5
             out_x = mid_sx - body_sx
             out_y = mid_sy - body_sy
-            out_len = math.sqrt(out_x ** 2 + out_y ** 2) or 1.0
+            out_len = math.sqrt(out_x**2 + out_y**2) or 1.0
             knee_sx = mid_sx + out_x / out_len * self._ELBOW_OUT
             knee_sy = mid_sy + out_y / out_len * self._ELBOW_OUT
 
             col = _LEG_COLS[i]
-            pyxel.line(int(shoulder_sx), int(shoulder_sy), int(knee_sx), int(knee_sy), col)
+            pyxel.line(
+                int(shoulder_sx), int(shoulder_sy), int(knee_sx), int(knee_sy), col
+            )
             pyxel.line(int(knee_sx), int(knee_sy), int(foot_sx), int(foot_sy), col)
             pyxel.pset(int(foot_sx), int(foot_sy), 6)
 
@@ -449,8 +459,8 @@ class FractalBlaster(Artifact):
         for ry in range(20):
             for rx in range(30):
                 n = int(self._cache[ry, rx])
-                if n == 20:       # in-set
+                if n == 20:  # in-set
                     pyxel.rect(rx * S, ry * S, S, S, in_set_col)
-                elif n >= 13:     # near-boundary
+                elif n >= 13:  # near-boundary
                     pyxel.rect(rx * S, ry * S, S, S, near_col)
         pyxel.dither(1.0)

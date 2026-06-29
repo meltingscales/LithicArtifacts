@@ -29,6 +29,7 @@ _DIRS = ((-1, 0), (1, 0), (0, -1), (0, 1))
 # Pair detectors (pure, no side-effects)
 # ---------------------------------------------------------------------------
 
+
 def _adj_pairs(body_grid, cls_a, cls_b):
     """Generic 4-dir adjacency: every (r,c,nr,nc) where [r][c] is cls_a and [nr][nc] is cls_b."""
     pairs = []
@@ -57,6 +58,7 @@ def rocketfin_ice_pairs(body_grid):
 # ---------------------------------------------------------------------------
 # Active checks
 # ---------------------------------------------------------------------------
+
 
 def fractal_wallbreaker_active(body_grid):
     """True if FractalBlaster and Wallbreaker are 4-dir adjacent."""

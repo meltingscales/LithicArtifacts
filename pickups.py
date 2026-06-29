@@ -1,4 +1,5 @@
 import pyxel
+
 # fmt: off
 from constants import TILE, SCREEN_H
 # fmt: on

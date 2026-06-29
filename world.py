@@ -1,4 +1,5 @@
 import random
+
 # fmt: off
 from artifacts import (
     FractalBlaster, IceMissile, MechaspiderLegs, RocketFin,
@@ -102,8 +103,8 @@ class World:
         tiles = {}
         # Boundary walls
         for r in range(SECTION_H):
-            tiles[(0,          abs_start + r)] = 1
-            tiles[(COLS - 1,   abs_start + r)] = 1
+            tiles[(0, abs_start + r)] = 1
+            tiles[(COLS - 1, abs_start + r)] = 1
 
         # Divider wall with gap
         for r in range(abs_start, abs_start + SECTION_H):
@@ -130,7 +131,7 @@ class World:
 
             if self.seed == SEED_ALLITEMS:
                 if self._gen_sections >= len(_ARTIFACT_POOL):
-                    break   # all items shown; stop generating
+                    break  # all items shown; stop generating
                 tiles, spawns, pickup_spec = self._gen_allitems_section(
                     abs_start, self._gen_sections
                 )
@@ -141,12 +142,12 @@ class World:
                 floor_r = abs_start + SECTION_H - 3
                 tiles = {}
                 for r in range(SECTION_H):
-                    tiles[(0, abs_start + r)]        = 1
+                    tiles[(0, abs_start + r)] = 1
                     tiles[(COLS - 1, abs_start + r)] = 1
                 for c in range(1, COLS - 1):
-                    tiles[(c, floor_r)] = 1          # solid floor
+                    tiles[(c, floor_r)] = 1  # solid floor
                 for c in range(3, COLS - 2, 3):
-                    tiles[(c, floor_r - 1)] = 1      # 1-block pillar on floor
+                    tiles[(c, floor_r - 1)] = 1  # 1-block pillar on floor
                 spawns, pickup_spec = [], None
                 fl, fr = self._free_l, self._free_r
             else:
@@ -155,16 +156,18 @@ class World:
                 )
 
             # Special-seed overrides (see SPECIAL-SEEDS.md)
-            if self.seed == SEED_EMPTY:   # empty world — strip interior tiles + spawns
-                tiles  = {k: v for k, v in tiles.items() if k[0] in (0, COLS - 1)}
+            if self.seed == SEED_EMPTY:  # empty world — strip interior tiles + spawns
+                tiles = {k: v for k, v in tiles.items() if k[0] in (0, COLS - 1)}
                 spawns = []
-            elif self.seed == SEED_GAUNTLET:  # gauntlet — guarantee all enemy types per section
+            elif (
+                self.seed == SEED_GAUNTLET
+            ):  # gauntlet — guarantee all enemy types per section
                 mid_r = abs_start + SECTION_H // 2
                 cx    = (fl + fr) // 2  # fmt: skip
                 spawns += [
-                    (cx * TILE,                          (mid_r - 5) * TILE, "flyer"),
-                    (min(COLS - 2, cx + 5) * TILE,      (mid_r - 5) * TILE, "shooty_flier"),
-                    (max(1,        cx - 5) * TILE,       (mid_r - 1) * TILE, "crawler"),
+                    (cx * TILE, (mid_r - 5) * TILE, "flyer"),
+                    (min(COLS - 2, cx + 5) * TILE, (mid_r - 5) * TILE, "shooty_flier"),
+                    (max(1, cx - 5) * TILE, (mid_r - 1) * TILE, "crawler"),
                 ]
             self.tiles.update(tiles)
             self.pending_spawns.extend(spawns)

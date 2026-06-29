@@ -31,7 +31,7 @@
 | Open / close | F1 | — |
 | Navigate | Arrows / k / j | D-pad Up/Down |
 | Toggle artifact | Z / Enter | A |
-| Close | Esc | B / Start |
+| Close | F1 | B / Start |
 
 ## Artifacts
 

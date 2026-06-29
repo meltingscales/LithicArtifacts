@@ -1,6 +1,7 @@
 import math
 import random
 import pyxel
+
 # fmt: off
 from constants import (
     TILE, SCREEN_H,
