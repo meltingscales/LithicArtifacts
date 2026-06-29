@@ -1,5 +1,6 @@
 # Done
 
+- Floor counter: `B01`–`BXX` displayed top-right of HUD; derived from player y vs PREAMBLE_ROWS + SECTION_H
 - Bug: ESC closed game AND menus — disabled pyxel default ESC quit (`quit_key=KEY_NONE`); debug menu now closes with F1/B/Start only; ESC reserved for pause menu cancel/close
 - Bug: FractalBlaster bg invisible on Abyss/Caverns — draw_bg now receives biome_bg color and swaps fractal colors to avoid matching the background
 

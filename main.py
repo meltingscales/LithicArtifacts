@@ -1468,6 +1468,12 @@ class Game:
             hud_x = 4 + p.max_hp * 5 + 6
             pyxel.text(hud_x, SCREEN_H - 8, f"{art.glyph}:{art.ammo:02d}", hud_col)
 
+        # Floor counter — top-right
+        player_row = int(p.y // TILE)
+        floor_num = max(1, (player_row - PREAMBLE_ROWS) // SECTION_H + 1)
+        floor_str = f"B{floor_num:02d}"
+        pyxel.text(SCREEN_W - len(floor_str) * 4 - 4, 4, floor_str, DARK_GRAY)
+
         if self.biome_banner_timer > 0:
             self._draw_biome_banner()
 

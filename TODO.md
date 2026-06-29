@@ -4,7 +4,7 @@
 <!--None yet.-->
 
 ## Gameplay
-- Floors / progression (floor counter, difficulty scaling)
+- Difficulty scaling: adjust enemy density / type and artifact quality by floor depth
 
 
 ## Worldgen
