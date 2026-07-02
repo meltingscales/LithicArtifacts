@@ -108,6 +108,8 @@ class Game:
         #   y=16: player body tiles (same x layout as y=8)
         #   y=24: aim body tiles (8×8, x = dir*8):
         #         0=R, 1=UR, 2=U, 3=UL, 4=L, 5=DL, 6=D, 7=DR
+        #         8=hang-away, 9=hang-up, 10=hang-down, 11=hang-diag-up, 12=hang-diag-down
+        #         (hang tiles authored for hang_wall=1 / wall-on-right; mirrored via flip)
         # fmt: on
         pyxel.images[0].load(0, 0, "assets/img/flyer.png")
         pyxel.images[0].load(16, 0, "assets/img/VampiricCape.png")
@@ -132,6 +134,11 @@ class Game:
         load_ppm(0, 40, 24, "assets/img/player-c-aim-dl.ppm")
         load_ppm(0, 48, 24, "assets/img/player-c-aim-d.ppm")
         load_ppm(0, 56, 24, "assets/img/player-c-aim-dr.ppm")
+        load_ppm(0, 64, 24, "assets/img/player-c-hangaim-away.ppm")
+        load_ppm(0, 72, 24, "assets/img/player-c-hangaim-up.ppm")
+        load_ppm(0, 80, 24, "assets/img/player-c-hangaim-down.ppm")
+        load_ppm(0, 88, 24, "assets/img/player-c-hangaim-diag-up.ppm")
+        load_ppm(0, 96, 24, "assets/img/player-c-hangaim-diag-down.ppm")
         # Sound 0: flyer spawn buzz (short descending triangle)
         pyxel.sounds[0].set("e3d3c3", "t", "543", "nnn", 10)
         # Sound 1: flyer shoot (noise burst with fadeout)
@@ -659,6 +666,15 @@ class Game:
         (-1,  1): 40,   # DL
         ( 0,  1): 48,   # D
         ( 1,  1): 56,   # DR
+    }
+    # Keyed by (aim_dx != 0, aim_dy) — aim_dx sign always matches -hang_wall while
+    # hanging, so only the away/straight distinction and vertical component matter.
+    _HANG_AIM_BODY_X = {
+        (True,   0): 64,   # straight away
+        (False, -1): 72,   # up
+        (False,  1): 80,   # down
+        (True,  -1): 88,   # diag up-away
+        (True,   1): 96,   # diag down-away
     }
     # fmt: on
 
@@ -1471,8 +1487,12 @@ class Game:
             pass  # skip draw this frame
         elif p.state == "hanging":
             fw = p.hang_wall * 8
-            pyxel.blt(px, py,     0, 72, 8,  fw, 8, 0)
-            pyxel.blt(px, py + 8, 0, 72, 16, fw, 8, 0)
+            pyxel.blt(px, py, 0, 72, 8, fw, 8, 0)
+            if p.aim_locked:
+                bx = self._HANG_AIM_BODY_X.get((p.aim_dx != 0, p.aim_dy), 64)
+                pyxel.blt(px, py + 8, 0, bx, 24, fw, 8, 0)
+            else:
+                pyxel.blt(px, py + 8, 0, 72, 16, fw, 8, 0)
         elif p.climbing:
             pyxel.text(px + 2, py + 1, "@", YELLOW)
             pyxel.text(px + 2, py + TILE + 1, "H", YELLOW)
