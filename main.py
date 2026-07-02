@@ -8,8 +8,9 @@ from bullets   import Bullet, FractalBullet, FractalBulletSmall, IceFragment, Mi
 from enemies   import Crawler, Flyer, ShootyFlier, EnemyBullet
 from pickups   import MissileCanister, WorldPickup
 from player    import Player, P_W, P_H
-from synergies import all_synergy_pairs, fractal_wallbreaker_active, rocketfin_ice_active
-from world     import World
+from synergies   import all_synergy_pairs, fractal_wallbreaker_active, rocketfin_ice_active
+from world       import World
+from spriteutil  import load_ppm
 from constants import (
     SCREEN_W, SCREEN_H, TILE, COLS,
     PREAMBLE_ROWS, SECTION_H, BIOME_SECTION_LEN,
@@ -97,13 +98,36 @@ class Game:
             fps=60,
             quit_key=pyxel.KEY_NONE,
         )
-        # Sprites — bank 0, (0,0): 16×8 flyer; (16,0): 8×8 VampiricCape; (24,0): 8×8 MissileCanister
-        #           (32,0): 8×8 tile-biomech-center; (40,0): 8×8 tile-biomech-platform
+        # fmt: off
+        # Sprites — bank 0 layout:
+        #   y=0:  (0,0) 16×8 flyer | (16,0) VampiricCape | (24,0) MissileCanister
+        #         (32,0) tile-biomech-center | (40,0) tile-biomech-platform
+        #   y=8:  player head tiles (8×8 each, x = frame*8):
+        #         0=idle, 1=walk-A, 2=walk-B, 3=jump-tuck, 4=jump-straight, 5=jump-spin, 6=wallhang
+        #   y=16: player body tiles (same x layout as y=8)
+        #   y=24: aim body tiles (8×8, x = dir*8):
+        #         0=R, 1=UR, 2=U, 3=UL, 4=L, 5=DL, 6=D, 7=DR
+        # fmt: on
         pyxel.images[0].load(0, 0, "assets/img/flyer.png")
         pyxel.images[0].load(16, 0, "assets/img/VampiricCape.png")
         pyxel.images[0].load(24, 0, "assets/img/missilecanister.png")
         pyxel.images[0].load(32, 0, "assets/img/tile-biomech-center.png")
         pyxel.images[0].load(40, 0, "assets/img/tile-biomech-platform.png")
+        load_ppm(0,  0, 8, "assets/img/player-c.ppm")
+        load_ppm(0,  8, 8, "assets/img/player-c-walk-a.ppm")
+        load_ppm(0, 16, 8, "assets/img/player-c-walk-b.ppm")
+        load_ppm(0, 24, 8, "assets/img/player-c-jump.ppm")
+        load_ppm(0, 32, 8, "assets/img/player-c-jump-straight.ppm")
+        load_ppm(0, 40, 8, "assets/img/player-c-jump-spin.ppm")
+        load_ppm(0, 48, 8, "assets/img/player-c-wallhang.ppm")
+        load_ppm(0,  0, 24, "assets/img/player-c-aim-r.ppm")
+        load_ppm(0,  8, 24, "assets/img/player-c-aim-ur.ppm")
+        load_ppm(0, 16, 24, "assets/img/player-c-aim-u.ppm")
+        load_ppm(0, 24, 24, "assets/img/player-c-aim-ul.ppm")
+        load_ppm(0, 32, 24, "assets/img/player-c-aim-l.ppm")
+        load_ppm(0, 40, 24, "assets/img/player-c-aim-dl.ppm")
+        load_ppm(0, 48, 24, "assets/img/player-c-aim-d.ppm")
+        load_ppm(0, 56, 24, "assets/img/player-c-aim-dr.ppm")
         # Sound 0: flyer spawn buzz (short descending triangle)
         pyxel.sounds[0].set("e3d3c3", "t", "543", "nnn", 10)
         # Sound 1: flyer shoot (noise burst with fadeout)
@@ -620,6 +644,30 @@ class Game:
             for c in range(5)
             if self.body_grid[r][c] is not None
         )
+
+    # fmt: off
+    _AIM_BODY_X = {
+        ( 1,  0):  0,   # R
+        ( 1, -1):  8,   # UR
+        ( 0, -1): 16,   # U
+        (-1, -1): 24,   # UL
+        (-1,  0): 32,   # L
+        (-1,  1): 40,   # DL
+        ( 0,  1): 48,   # D
+        ( 1,  1): 56,   # DR
+    }
+    # fmt: on
+
+    def _player_anim_frame(self, p):
+        if not p.on_ground:
+            if p.jump_type == "straight":
+                return 4
+            if p.jump_type == "spin":
+                return 5
+            return 3   # falling off edge
+        if abs(p.vx) > 0.05:
+            return 1 + (pyxel.frame_count // 8) % 2
+        return 0
 
     def _active_missile(self):
         missiles = [a for a in self.player.artifacts if isinstance(a, MissileArtifact)]
@@ -1418,8 +1466,9 @@ class Game:
         if p.inv_cd > 0 and (pyxel.frame_count // 4) % 2:
             pass  # skip draw this frame
         elif p.state == "hanging":
-            pyxel.text(px + 2, py + 1, "@", YELLOW)
-            pyxel.text(px + 2, py + TILE + 1, "n", YELLOW)
+            fw = p.hang_wall * 8
+            pyxel.blt(px, py,     0, 48, 8,  fw, 8, 0)
+            pyxel.blt(px, py + 8, 0, 48, 16, fw, 8, 0)
         elif p.climbing:
             pyxel.text(px + 2, py + 1, "@", YELLOW)
             pyxel.text(px + 2, py + TILE + 1, "H", YELLOW)
@@ -1428,16 +1477,17 @@ class Game:
         elif p.burrowing:
             pyxel.text(px + 2, py + 1, "@", YELLOW)
             pyxel.text(px + 2, py + TILE + 1, "v", YELLOW)
-        elif not p.on_ground and p.jump_type == "straight":
-            pyxel.text(px + 2, py + 1, "@", YELLOW)
-            pyxel.text(px + 2, py + TILE + 1, "|", YELLOW)
-        elif not p.on_ground and p.jump_type == "spin":
-            body = "*" if (pyxel.frame_count // 4) % 2 else "o"
-            pyxel.text(px + 2, py + 1, "@", YELLOW)
-            pyxel.text(px + 2, py + TILE + 1, body, YELLOW)
         else:
-            pyxel.text(px + 2, py + 1, "@", YELLOW)
-            pyxel.text(px + 2, py + TILE + 1, "W", YELLOW)
+            fi = self._player_anim_frame(p)
+            fx = fi * 8
+            fw = p.facing * 8
+            if p.aim_locked:
+                aim_bx = self._AIM_BODY_X.get((p.aim_dx, p.aim_dy), fx)
+                pyxel.blt(px, py,     0, fx,      8,  fw, 8, 0)
+                pyxel.blt(px, py + 8, 0, aim_bx, 24,   8, 8, 0)
+            else:
+                pyxel.blt(px, py,     0, fx, 8,  fw, 8, 0)
+                pyxel.blt(px, py + 8, 0, fx, 16, fw, 8, 0)
 
         # Aim reticle: orange box when aim-locked; cyan cross when missile mode
         missile_mode = self._missile_mode()
