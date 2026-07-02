@@ -103,7 +103,8 @@ class Game:
         #   y=0:  (0,0) 16×8 flyer | (16,0) VampiricCape | (24,0) MissileCanister
         #         (32,0) tile-biomech-center | (40,0) tile-biomech-platform
         #   y=8:  player head tiles (8×8 each, x = frame*8):
-        #         0=idle, 1=walk-A, 2=walk-B, 3=jump-tuck, 4=jump-straight, 5=jump-spin, 6=wallhang
+        #         0=idle, 1=walk-A, 2=walk-B, 3=jump-tuck, 4=jump-straight
+        #         5-8=spin cycle (0°/90°/180°/270°), 9=wallhang
         #   y=16: player body tiles (same x layout as y=8)
         #   y=24: aim body tiles (8×8, x = dir*8):
         #         0=R, 1=UR, 2=U, 3=UL, 4=L, 5=DL, 6=D, 7=DR
@@ -119,7 +120,10 @@ class Game:
         load_ppm(0, 24, 8, "assets/img/player-c-jump.ppm")
         load_ppm(0, 32, 8, "assets/img/player-c-jump-straight.ppm")
         load_ppm(0, 40, 8, "assets/img/player-c-jump-spin.ppm")
-        load_ppm(0, 48, 8, "assets/img/player-c-wallhang.ppm")
+        load_ppm(0, 48, 8, "assets/img/player-c-jump-spin-1.ppm")
+        load_ppm(0, 56, 8, "assets/img/player-c-jump-spin-2.ppm")
+        load_ppm(0, 64, 8, "assets/img/player-c-jump-spin-3.ppm")
+        load_ppm(0, 72, 8, "assets/img/player-c-wallhang.ppm")
         load_ppm(0,  0, 24, "assets/img/player-c-aim-r.ppm")
         load_ppm(0,  8, 24, "assets/img/player-c-aim-ur.ppm")
         load_ppm(0, 16, 24, "assets/img/player-c-aim-u.ppm")
@@ -663,8 +667,8 @@ class Game:
             if p.jump_type == "straight":
                 return 4
             if p.jump_type == "spin":
-                return 5
-            return 3   # falling off edge
+                return 5 + (pyxel.frame_count // 4) % 4  # frames 5-8, ~4 spins/s
+            return 3   # falling off edge (no jump)
         if abs(p.vx) > 0.05:
             return 1 + (pyxel.frame_count // 8) % 2
         return 0
@@ -1467,8 +1471,8 @@ class Game:
             pass  # skip draw this frame
         elif p.state == "hanging":
             fw = p.hang_wall * 8
-            pyxel.blt(px, py,     0, 48, 8,  fw, 8, 0)
-            pyxel.blt(px, py + 8, 0, 48, 16, fw, 8, 0)
+            pyxel.blt(px, py,     0, 72, 8,  fw, 8, 0)
+            pyxel.blt(px, py + 8, 0, 72, 16, fw, 8, 0)
         elif p.climbing:
             pyxel.text(px + 2, py + 1, "@", YELLOW)
             pyxel.text(px + 2, py + TILE + 1, "H", YELLOW)
