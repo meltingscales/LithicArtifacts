@@ -27,7 +27,7 @@ def load_ppm(bank, dst_x, dst_y, path):
     w, h = map(int, lines[1].split())
     # lines[2] is max_val; skip it
     vals = list(map(int, " ".join(lines[3:]).split()))
-    img = pyxel.image(bank)
+    img = pyxel.images[bank]
     idx = 0
     for y in range(h):
         for x in range(w):
