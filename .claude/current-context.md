@@ -62,7 +62,7 @@ See `README.md` and `DESIGN-DECISIONS.md` for locked decisions.
 
 ### Game systems
 - Smooth camera (33% from top bias)
-- Pause menu: body grid + inventory panel; artifact drag-and-drop; synergy link drawn between qualifying adjacent cells
+- Pause menu (Tab/Start): Body & Inventory / Keybinds / Quit (`pause_screen` = menu|body|keys); `input_device` tracks last-used kb/pad and `_hint(kb, pad)` picks hint text; body screen = body grid + inventory panel; artifact drag-and-drop; synergy link drawn between qualifying adjacent cells
 - F1 debug menu: toggle artifacts + immortality flag; gamepad: D-pad nav, A toggle, B/Start close
 - Death: hp==0 → 1.5s death screen → Z-to-respawn (resets pos/hp/enemies)
 - Missile canisters: 1/5 drop chance on kill; 10s lifetime, blinks last 3s; refills least-full missile

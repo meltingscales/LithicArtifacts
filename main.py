@@ -107,6 +107,7 @@ class Game:
         pyxel.sounds[0].set("e3d3c3", "t", "543", "nnn", 10)
         # Sound 1: flyer shoot (noise burst with fadeout)
         pyxel.sounds[1].set("a4", "n", "7", "f", 5)
+        self.input_device = "kb"  # "kb" | "pad": last device touched; drives hint text
         # Declare attributes before _full_reset so they always exist
         self.seed = DEFAULT_SEED
         self.player = Player()
@@ -137,6 +138,8 @@ class Game:
         self.held                = None       # artifact being moved
         self.held_src            = None       # ("body", r, c) | ("inv", i)
         self.paused              = False
+        self.pause_screen        = "menu"   # "menu" | "body" | "keys"
+        self.menu_cursor         = 0
         self.pickup_dialogue     = None
         self.pause_panel         = 0          # 0 = body, 1 = inventory
         self.body_cursor         = [0, 0]
@@ -211,7 +214,12 @@ class Game:
         pyxel.rect(px0, py0, pw, ph, BLACK)
         pyxel.rectb(px0, py0, pw, ph, LIGHT_GRAY)
         pyxel.text(px0 + 4, py0 + 4, "-- DEBUG --", YELLOW)
-        pyxel.text(px0 + 60, py0 + 4, "Z/A:toggle  F1/B:close", DARK_GRAY)
+        pyxel.text(
+            px0 + 60,
+            py0 + 4,
+            self._hint("Z:toggle  F1:close", "A:toggle  B:close"),
+            DARK_GRAY,
+        )
         for i, (label, cls) in enumerate(DEBUG_ITEMS):
             cursor = ">" if i == self.debug_cursor else " "
             color = YELLOW if i == self.debug_cursor else LIGHT_GRAY
@@ -250,6 +258,7 @@ class Game:
         elif pyxel.btnp(pyxel.KEY_TAB) or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_START):
             self.pickup_dialogue = None
             self.paused = True
+            self.pause_screen = "body"
 
     def _draw_pickup_dialogue(self, cls):
         pw, ph = 204, 92
@@ -264,9 +273,17 @@ class Game:
         pyxel.text(px0 + 14, py0 + 20, cls.name, YELLOW)
         for i, ln in enumerate(self._wrap(cls.description, 46)[:3]):
             pyxel.text(px0 + 4, py0 + 34 + i * 10, ln, LIGHT_GRAY)
-        pyxel.text(px0 + 4, py0 + ph - 19, "Z / X  dismiss", DARK_GRAY)
         pyxel.text(
-            px0 + 4, py0 + ph - 10, "Tab / Start  open body to install", DARK_GRAY
+            px0 + 4,
+            py0 + ph - 19,
+            self._hint("Z / X  dismiss", "A / X  dismiss"),
+            DARK_GRAY,
+        )
+        pyxel.text(
+            px0 + 4,
+            py0 + ph - 10,
+            self._hint("Tab  open body to install", "Start  open body to install"),
+            DARK_GRAY,
         )
 
     # -- pick / place helpers --
@@ -335,7 +352,109 @@ class Game:
 
     # -- update / draw --
 
+    _MENU_ITEMS = ("Body & Inventory", "Keybinds", "Quit")
+    # fmt: off
+    _KEYBINDS = (
+        # action               keyboard          gamepad
+        ("Move",               "Arrows / hjkl",  "D-pad"),
+        ("Jump",               "Space / Up / K", "A / B"),
+        ("Crouch (toggle)",    "Down / J",       "D-pad Down"),
+        ("Shoot",              "Z",              "X"),
+        ("Aim lock (hold)",    "X",              "LB"),
+        ("Missile mode (hold)","A",              "RB"),
+        ("Cycle missile",      "-",              "Select"),
+        ("Burrow (crouched)",  "C",              "Y"),
+        ("Pause menu",         "Tab",            "Start"),
+        ("Body: switch panel", "Tab",            "LB / RB"),
+        ("Body: pick / place", "Z / Enter",      "A"),
+        ("Back / cancel",      "Esc",            "B"),
+    )
+    # Keys polled to detect which device the player used last
+    _KB_KEYS = (
+        pyxel.KEY_LEFT, pyxel.KEY_RIGHT, pyxel.KEY_UP, pyxel.KEY_DOWN,
+        pyxel.KEY_H, pyxel.KEY_J, pyxel.KEY_K, pyxel.KEY_L,
+        pyxel.KEY_SPACE, pyxel.KEY_Z, pyxel.KEY_X, pyxel.KEY_A, pyxel.KEY_C,
+        pyxel.KEY_TAB, pyxel.KEY_ESCAPE, pyxel.KEY_RETURN, pyxel.KEY_F1,
+    )
+    _PAD_KEYS = (
+        pyxel.GAMEPAD1_BUTTON_A, pyxel.GAMEPAD1_BUTTON_B, pyxel.GAMEPAD1_BUTTON_X, pyxel.GAMEPAD1_BUTTON_Y,
+        pyxel.GAMEPAD1_BUTTON_LEFTSHOULDER, pyxel.GAMEPAD1_BUTTON_RIGHTSHOULDER,
+        pyxel.GAMEPAD1_BUTTON_START, pyxel.GAMEPAD1_BUTTON_BACK,
+        pyxel.GAMEPAD1_BUTTON_DPAD_UP, pyxel.GAMEPAD1_BUTTON_DPAD_DOWN,
+        pyxel.GAMEPAD1_BUTTON_DPAD_LEFT, pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT,
+    )
+    # fmt: on
+
+    def _track_input_device(self):
+        """Remember whether the keyboard or the gamepad was touched most recently."""
+        if any(pyxel.btn(k) for k in self._PAD_KEYS):
+            self.input_device = "pad"
+        elif any(pyxel.btn(k) for k in self._KB_KEYS):
+            self.input_device = "kb"
+
+    def _hint(self, kb, pad):
+        """Pick the on-screen hint text for the last-used input device."""
+        return pad if self.input_device == "pad" else kb
+
     def _update_pause(self):
+        if self.pause_screen == "body":
+            self._update_body_panel()
+            return
+        if self.pause_screen == "keys":
+            if self._cancel_p() or self._act_p():
+                self.pause_screen = "menu"
+            return
+        # main menu
+        if self._cancel_p() or pyxel.btnp(pyxel.KEY_TAB):
+            self.paused = False
+            return
+        if self._up_p():
+            self.menu_cursor = (self.menu_cursor - 1) % len(self._MENU_ITEMS)
+        if self._down_p():
+            self.menu_cursor = (self.menu_cursor + 1) % len(self._MENU_ITEMS)
+        if self._act_p():
+            if self.menu_cursor == 0:
+                self.pause_screen = "body"
+            elif self.menu_cursor == 1:
+                self.pause_screen = "keys"
+            else:
+                pyxel.quit()
+
+    def _draw_pause(self):
+        if self.pause_screen == "body":
+            self._draw_body_panel()
+            return
+        pyxel.cls(BLACK)
+        pyxel.rectb(0, 0, SCREEN_W, SCREEN_H, LIGHT_GRAY)
+        if self.pause_screen == "keys":
+            pad = self.input_device == "pad"
+            pyxel.text(8, 6, "KEYBINDS", YELLOW)
+            pyxel.text(120, 6, "GAMEPAD" if pad else "KEYBOARD", DARK_GRAY)
+            for i, (action, kb, gp) in enumerate(self._KEYBINDS):
+                y = 18 + i * 10
+                pyxel.text(8, y, action, LIGHT_GRAY)
+                pyxel.text(120, y, gp if pad else kb, YELLOW)
+            pyxel.text(8, SCREEN_H - 12, self._hint("Esc  back", "B  back"), DARK_GRAY)
+            pyxel.text(120, SCREEN_H - 12, "(follows last used device)", DARK_GRAY)
+            return
+        pyxel.text(SCREEN_W // 2 - 12, 40, "PAUSED", YELLOW)
+        for i, label in enumerate(self._MENU_ITEMS):
+            y = 66 + i * 14
+            sel = i == self.menu_cursor
+            if sel:
+                pyxel.text(SCREEN_W // 2 - 44, y, ">", ORANGE)
+            pyxel.text(SCREEN_W // 2 - 36, y, label, YELLOW if sel else LIGHT_GRAY)
+        pyxel.text(
+            8,
+            SCREEN_H - 12,
+            self._hint(
+                "Z / Enter  select    Esc / Tab  resume",
+                "A  select    B / Start  resume",
+            ),
+            DARK_GRAY,
+        )
+
+    def _update_body_panel(self):
         # Tab / LB / RB: switch panels
         if (
             pyxel.btnp(pyxel.KEY_TAB)
@@ -350,7 +469,7 @@ class Game:
             if self.held:
                 self._cancel_hold()
             else:
-                self.paused = False
+                self.pause_screen = "menu"
             return
 
         up = self._up_p()
@@ -395,7 +514,7 @@ class Game:
         else:
             self.hover_timer += 1
 
-    def _draw_pause(self):
+    def _draw_body_panel(self):
         pyxel.cls(BLACK)
 
         # Panel headers
@@ -403,7 +522,12 @@ class Game:
         ic = YELLOW if self.pause_panel == 1 else LIGHT_GRAY
         pyxel.text(_GX, 4, "BODY", bc)
         pyxel.text(_IX, 4, "INVENTORY", ic)
-        pyxel.text(170, 4, "TAB:switch Esc:close", DARK_GRAY)
+        pyxel.text(
+            160,
+            4,
+            self._hint("TAB:switch  Esc:back", "LB/RB:switch  B:back"),
+            DARK_GRAY,
+        )
         pyxel.text(4, SCREEN_H - 8, f"seed:{self.seed}", DARK_GRAY)
 
         # Body grid
@@ -447,7 +571,12 @@ class Game:
         if self.held:
             hy = _GY + 5 * _CELL + 3
             pyxel.text(_GX, hy, f"HOLD:{self.held.glyph} {self.held.name}", ORANGE)
-            pyxel.text(_GX, hy + 9, "Z:place  Esc:cancel", DARK_GRAY)
+            pyxel.text(
+                _GX,
+                hy + 9,
+                self._hint("Z:place  Esc:cancel", "A:place  B:cancel"),
+                DARK_GRAY,
+            )
 
         # Inventory list (scrolling)
         max_vis = (_TIPY - _IY - 2) // _IRH
@@ -883,8 +1012,7 @@ class Game:
     # ---- update / draw ----
 
     def update(self):
-        if pyxel.btnp(pyxel.KEY_Q):
-            pyxel.quit()
+        self._track_input_device()
 
         # Death screen
         if self.dead:
@@ -917,6 +1045,8 @@ class Game:
         # Tab / Start opens pause menu from gameplay
         if pyxel.btnp(pyxel.KEY_TAB) or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_START):
             self.paused = True
+            self.pause_screen = "menu"
+            self.menu_cursor = 0
             return
 
         p = self.player
@@ -1424,7 +1554,12 @@ class Game:
         cy = SCREEN_H // 2
         pyxel.text(cx - 21, cy - 8, "YOU DIED", ORANGE)
         if self.death_timer == 0:
-            pyxel.text(cx - 30, cy + 4, "Z to continue", LIGHT_GRAY)
+            pyxel.text(
+                cx - 30,
+                cy + 4,
+                self._hint("Z to continue", "X to continue"),
+                LIGHT_GRAY,
+            )
 
     def draw(self):
         if self.dead:

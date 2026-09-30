@@ -12,17 +12,27 @@
 | Missile mode (hold) | A | RB |
 | Cycle missile type | — | Select |
 | Burrow (while crouching) | C | Y |
-| Body panel | Tab | Start |
-| Quit | Q | — |
+| Pause menu | Tab | Start |
 
-## Body Panel (pause screen)
+## Pause Menu
+
+Tab / Start opens a menu: **Body & Inventory**, **Keybinds**, **Quit**.
+On-screen hints and the Keybinds screen show keyboard or gamepad labels depending on which device was used last.
+
+| Action | Keyboard | Gamepad |
+|---|---|---|
+| Navigate | Up / Down / k / j | D-pad |
+| Select | Z / Enter | A |
+| Resume | Esc / Tab | B / Start |
+
+## Body Panel (from the pause menu)
 
 | Action | Keyboard | Gamepad |
 |---|---|---|
 | Switch panel | Tab | LB / RB |
 | Navigate | Arrows / hjkl | D-pad |
 | Pick up / place artifact | Z / Enter | A |
-| Cancel hold / close | Esc | B / Start |
+| Cancel hold / back to menu | Esc | B / Start |
 
 ## Debug Menu (dev only)
 
