@@ -546,19 +546,11 @@ class Game:
                     x0, y0, _CELL - 1, _CELL - 1, YELLOW if is_cur else DARK_GRAY
                 )
                 if is_cur and self.held:
-                    spr = self.held.sprite
-                    if spr:
-                        img, sx, sy2, w, h, ck = spr
-                        pyxel.blt(x0 + 2, y0 + 2, img, sx, sy2, w, h, ck)
-                    else:
-                        pyxel.text(x0 + 3, y0 + 3, self.held.glyph, ORANGE)
+                    u, v, w, h = SPR[self.held.sprite]
+                    pyxel.blt(x0 + 2, y0 + 2, 0, u, v, w, h, 0)
                 elif a:
-                    spr = a.sprite
-                    if spr:
-                        img, sx, sy2, w, h, ck = spr
-                        pyxel.blt(x0 + 2, y0 + 2, img, sx, sy2, w, h, ck)
-                    else:
-                        pyxel.text(x0 + 3, y0 + 3, a.glyph, LIGHT_GRAY)
+                    u, v, w, h = SPR[a.sprite]
+                    pyxel.blt(x0 + 2, y0 + 2, 0, u, v, w, h, 0)
 
         # Synergy links: pulsing line between each adjacent synergy pair
         half = (_CELL - 1) // 2
