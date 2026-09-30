@@ -71,6 +71,7 @@ class Enemy:
         self.damage = damage
         self.alive = True
         self.frozen_timer = 0
+        self.flash = 0  # white hit-flash frames
 
     @property
     def right(self):
@@ -82,6 +83,7 @@ class Enemy:
 
     def take_damage(self, amount):
         self.hp -= amount
+        self.flash = 4
         if self.hp <= 0:
             self.alive = False
 
@@ -91,7 +93,7 @@ class Enemy:
     def draw(self, cam):
         sy = int(self.y - cam)
         if -_TILE <= sy < _SCREEN_H:
-            col = 12 if self.frozen_timer > 0 else self.color
+            col = 7 if self.flash > 0 else 12 if self.frozen_timer > 0 else self.color
             pyxel.text(int(self.x) + 2, sy + 1, self.glyph, col)
 
 
@@ -198,9 +200,13 @@ class Flyer(Enemy):
         if -_TILE <= sy < _SCREEN_H:
             # Flip horizontally when moving left; sprite is 16×8, centred over 8×8 hitbox
             w = self._SPR_W if self.vx >= 0 else -self._SPR_W
+            if self.flash > 0:
+                for c in (1, 5, 13):
+                    pyxel.pal(c, 7)
             pyxel.blt(
                 int(self.x) - 4, sy, 0, self._SPR_U, self._SPR_V, w, self._SPR_H, 0
             )
+            pyxel.pal()
             if self.frozen_timer > 0:
                 pyxel.dither(0.5)
                 pyxel.rect(

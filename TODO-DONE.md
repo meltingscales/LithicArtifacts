@@ -1,5 +1,6 @@
 # Done
 
+- Polish pass: PICO-8 palette set explicitly at init (Pyxel default differed from every doc/asset, tinting grays blue and snapping PNG grays to brown); player PPMs merged into `assets/img/player-c.png` sheet and `spriteutil.py` removed; coyote time + jump buffering; enemy hit-flash, death/hurt particle bursts, landing dust, screen shake on damage; three duplicated kill blocks folded into `_damage_enemy`
 - Floor counter: `B01`–`BXX` displayed top-right of HUD; derived from player y vs PREAMBLE_ROWS + SECTION_H
 - Bug: ESC closed game AND menus — disabled pyxel default ESC quit (`quit_key=KEY_NONE`); debug menu now closes with F1/B/Start only; ESC reserved for pause menu cancel/close
 - Bug: FractalBlaster bg invisible on Abyss/Caverns — draw_bg now receives biome_bg color and swaps fractal colors to avoid matching the background

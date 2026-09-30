@@ -13,7 +13,9 @@ See `README.md` and `DESIGN-DECISIONS.md` for locked decisions.
 ## Tech stack
 
 - Python, managed by `uv`
-- Pyxel 2.9.6 (16-color palette, 240×160)
+- Pyxel 2.9.6 (240×160). Palette is PICO-8, set explicitly with `pyxel.colors.from_list(PALETTE)` in `main.py` — Pyxel's default palette is different and every doc/sprite assumes PICO-8 indices
+- Player sprites: single sheet `assets/img/player-c.png` (104×24) loaded at image bank 0, y=8; rows = head / body / aim-body. Author art as palette-exact PNG (never JPEG — lossy edges break palette snapping)
+- Feel: `COYOTE_FRAMES` / `JUMP_BUFFER` in constants.py; `Game._burst` particles, `Game.shake`, `Enemy.flash` for hit feedback
 - `just run` to launch, `just fmt` to format (uses `uvx ruff`)
 
 ## Where the codebase is right now

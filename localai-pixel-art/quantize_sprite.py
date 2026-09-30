@@ -26,24 +26,24 @@ except ImportError:
     sys.exit(1)
 
 # fmt: off
-# Pyxel default 16-color palette (RGB)
+# PICO-8 16-color palette (Pyxel palette is set to this in main.py) (RGB)
 PYXEL_PALETTE = [
     (  0,   0,   0),  #  0 black
-    ( 43,  51,  95),  #  1 dark navy
-    (126,  32, 114),  #  2 dark purple
-    ( 25, 149, 156),  #  3 teal
-    (139,  72,  82),  #  4 dark red-brown
-    ( 57,  92, 152),  #  5 dark blue-gray
-    (169, 193, 255),  #  6 light blue
-    (238, 238, 238),  #  7 white
-    (212,  24, 108),  #  8 red/pink
-    (211, 132,  65),  #  9 orange
-    (233, 195,  91),  # 10 yellow
-    (112, 198, 169),  # 11 mint green
-    (118, 150, 222),  # 12 sky blue
-    (163, 163, 163),  # 13 gray
-    (255, 151, 152),  # 14 light pink
-    (237, 199, 176),  # 15 peach
+    ( 29,  43,  83),  #  1 dark blue
+    (126,  37,  83),  #  2 dark purple
+    (  0, 135,  81),  #  3 dark green
+    (171,  82,  54),  #  4 brown
+    ( 95,  87,  79),  #  5 dark gray
+    (194, 195, 199),  #  6 light gray
+    (255, 241, 232),  #  7 white
+    (255,   0,  77),  #  8 red
+    (255, 163,   0),  #  9 orange
+    (255, 236,  39),  # 10 yellow
+    (  0, 228,  54),  # 11 green
+    ( 41, 173, 255),  # 12 blue
+    (131, 118, 156),  # 13 indigo
+    (255, 119, 168),  # 14 pink
+    (255, 204, 170),  # 15 peach
 ]
 # fmt: on
 

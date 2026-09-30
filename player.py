@@ -30,6 +30,8 @@ class Player:
         self.wj_coyote       = 0   # frames of coyote wall contact remaining
         self.wj_coyote_side  = 0   # side (-1/1) of last real wall contact
         self.ledge_cd     = 0
+        self.coyote       = 0    # frames of grace after leaving ground
+        self.jump_buf     = 0    # frames a jump press stays queued
         self.burrowing    = False
         self.crouching    = False
         self.climbing     = False

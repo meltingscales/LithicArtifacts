@@ -75,12 +75,13 @@ assets/:      Asset generation scripts and audio/image assets
 **Pyxel** (Python)
 
 - Native 240×160 canvas, scaled to window
-- 16-color palette (customizable)
+- 16-color palette — set to PICO-8 at init (`PALETTE` in `main.py`); Pyxel's own default is different
 - Built-in tilemap and sprite editor (`.pyxres` resource files)
 - `pip install pyxel`
 
 ```python
 import pyxel
+
 pyxel.init(240, 160, title="Lithic Artifacts")
 ```
 

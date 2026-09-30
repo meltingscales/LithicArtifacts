@@ -16,14 +16,15 @@ changing as artifacts accumulate on their body.
 | Resolution | 240 × 160 px (GBA native) |
 | Tile size | 8 × 8 px |
 | Grid | 30 × 20 tiles |
-| Palette | Pyxel default 16-color |
+| Palette | PICO-8 16-color (set via `pyxel.colors.from_list` in `main.py`; NOT Pyxel's default) |
 | Scale | Integer-scaled up for display |
 
 ---
 
 ## Color Palette Usage
 
-Pyxel's fixed 16-color palette. Colors are assigned roles, not used freely.
+PICO-8 16-color palette, applied at init. Colors are assigned roles, not used freely.
+Any PNG loaded with `Image.load` is snapped to this palette, so author art in PICO-8 colours.
 
 | Role | Color(s) | Notes |
 |---|---|---|

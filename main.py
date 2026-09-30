@@ -10,12 +10,11 @@ from pickups   import MissileCanister, WorldPickup
 from player    import Player, P_W, P_H
 from synergies   import all_synergy_pairs, fractal_wallbreaker_active, rocketfin_ice_active
 from world       import World
-from spriteutil  import load_ppm
 from constants import (
     SCREEN_W, SCREEN_H, TILE, COLS,
     PREAMBLE_ROWS, SECTION_H, BIOME_SECTION_LEN,
     GRAVITY, MAX_FALL, MOVE_SPEED,
-    JUMP_VEL, JUMP_VEL_MIN, WALL_JUMP_VEL, WALL_JUMP_HVX, WALL_JUMP_CD, WALL_JUMP_WINDOW, WALL_JUMP_COYOTE,
+    JUMP_VEL, JUMP_VEL_MIN, COYOTE_FRAMES, JUMP_BUFFER, WALL_JUMP_VEL, WALL_JUMP_HVX, WALL_JUMP_CD, WALL_JUMP_WINDOW, WALL_JUMP_COYOTE,
     BULLET_SPEED, SHOOT_COOLDOWN, DEATH_HOLD,
     P_HIT_INS, CANISTER_DROP_CHANCE, SYNERGY_WALL_BREAK_CHANCE,
     CLIMB_SPEED,
@@ -24,6 +23,15 @@ from constants import (
 # fmt: on
 
 # fmt: off
+# PICO-8 palette. Every doc, palette-index constant and sprite in this repo was
+# authored against it, but Pyxel ships a different default palette, so it is set
+# explicitly at init (also makes Image.load snap PNG colours to the right indices).
+PALETTE = [
+    0x000000, 0x1D2B53, 0x7E2553, 0x008751, 0xAB5236, 0x5F574F, 0xC2C3C7, 0xFFF1E8,
+    0xFF004D, 0xFFA300, 0xFFEC27, 0x00E436, 0x29ADFF, 0x83769C, 0xFF77A8, 0xFFCCAA,
+]
+WHITE      = 7
+RED        = 8
 BLACK      = 0
 DARK_GRAY  = 5
 LIGHT_GRAY = 6
@@ -98,10 +106,12 @@ class Game:
             fps=60,
             quit_key=pyxel.KEY_NONE,
         )
+        pyxel.colors.from_list(PALETTE)
         # fmt: off
         # Sprites — bank 0 layout:
         #   y=0:  (0,0) 16×8 flyer | (16,0) VampiricCape | (24,0) MissileCanister
         #         (32,0) tile-biomech-center | (40,0) tile-biomech-platform
+        #   y=8..31: assets/img/player-c.png (104×24 sheet)
         #   y=8:  player head tiles (8×8 each, x = frame*8):
         #         0=idle, 1=walk-A, 2=walk-B, 3=jump-tuck, 4=jump-straight
         #         5-8=spin cycle (0°/90°/180°/270°), 9=wallhang
@@ -116,29 +126,7 @@ class Game:
         pyxel.images[0].load(24, 0, "assets/img/missilecanister.png")
         pyxel.images[0].load(32, 0, "assets/img/tile-biomech-center.png")
         pyxel.images[0].load(40, 0, "assets/img/tile-biomech-platform.png")
-        load_ppm(0,  0, 8, "assets/img/player-c.ppm")
-        load_ppm(0,  8, 8, "assets/img/player-c-walk-a.ppm")
-        load_ppm(0, 16, 8, "assets/img/player-c-walk-b.ppm")
-        load_ppm(0, 24, 8, "assets/img/player-c-jump.ppm")
-        load_ppm(0, 32, 8, "assets/img/player-c-jump-straight.ppm")
-        load_ppm(0, 40, 8, "assets/img/player-c-jump-spin.ppm")
-        load_ppm(0, 48, 8, "assets/img/player-c-jump-spin-1.ppm")
-        load_ppm(0, 56, 8, "assets/img/player-c-jump-spin-2.ppm")
-        load_ppm(0, 64, 8, "assets/img/player-c-jump-spin-3.ppm")
-        load_ppm(0, 72, 8, "assets/img/player-c-wallhang.ppm")
-        load_ppm(0,  0, 24, "assets/img/player-c-aim-r.ppm")
-        load_ppm(0,  8, 24, "assets/img/player-c-aim-ur.ppm")
-        load_ppm(0, 16, 24, "assets/img/player-c-aim-u.ppm")
-        load_ppm(0, 24, 24, "assets/img/player-c-aim-ul.ppm")
-        load_ppm(0, 32, 24, "assets/img/player-c-aim-l.ppm")
-        load_ppm(0, 40, 24, "assets/img/player-c-aim-dl.ppm")
-        load_ppm(0, 48, 24, "assets/img/player-c-aim-d.ppm")
-        load_ppm(0, 56, 24, "assets/img/player-c-aim-dr.ppm")
-        load_ppm(0, 64, 24, "assets/img/player-c-hangaim-away.ppm")
-        load_ppm(0, 72, 24, "assets/img/player-c-hangaim-up.ppm")
-        load_ppm(0, 80, 24, "assets/img/player-c-hangaim-down.ppm")
-        load_ppm(0, 88, 24, "assets/img/player-c-hangaim-diag-up.ppm")
-        load_ppm(0, 96, 24, "assets/img/player-c-hangaim-diag-down.ppm")
+        pyxel.images[0].load(0, 8, "assets/img/player-c.png")
         # Sound 0: flyer spawn buzz (short descending triangle)
         pyxel.sounds[0].set("e3d3c3", "t", "543", "nnn", 10)
         # Sound 1: flyer shoot (noise burst with fadeout)
@@ -160,6 +148,8 @@ class Game:
         self.missile_bullets     = []
         self.ice_fragments       = []
         self.canisters           = []
+        self.particles           = []   # [x, y, vx, vy, life, col]
+        self.shake               = 0    # screen-shake frames remaining
         self.cam_y               = 0.0
         # Pause / body-panel state
         self.body_grid           = [[None] * 5 for _ in range(5)]
@@ -630,6 +620,29 @@ class Game:
     def _select_btnp(self):
         return pyxel.btnp(pyxel.GAMEPAD1_BUTTON_BACK)
 
+    def _burst(self, x, y, n, cols, speed=1.5):
+        for _ in range(n):
+            ang = random.random() * math.tau
+            spd = random.uniform(0.3, speed)
+            self.particles.append(
+                [
+                    x,
+                    y,
+                    math.cos(ang) * spd,
+                    math.sin(ang) * spd,
+                    random.randint(10, 22),
+                    random.choice(cols),
+                ]
+            )
+
+    def _damage_enemy(self, e, amount):
+        e.take_damage(amount)
+        if not e.alive:
+            self._burst(e.x + TILE / 2, e.y + TILE / 2, 8, (RED, ORANGE, WHITE))
+            for a in self.player.artifacts:
+                a.on_kill(self.player)
+            self._maybe_drop_canister(e)
+
     def _maybe_drop_canister(self, e):
         if random.random() < CANISTER_DROP_CHANCE:
             self.canisters.append(MissileCanister(e.x, e.y))
@@ -684,7 +697,7 @@ class Game:
                 return 4
             if p.jump_type == "spin":
                 return 5 + (pyxel.frame_count // 4) % 4  # frames 5-8, ~4 spins/s
-            return 3   # falling off edge (no jump)
+            return 3  # falling off edge (no jump)
         if abs(p.vx) > 0.05:
             return 1 + (pyxel.frame_count // 8) % 2
         return 0
@@ -698,18 +711,20 @@ class Game:
     # ---- physics ----
 
     def _occupied_rows(self, p):
-        # Use tile-row arithmetic instead of float bottom so that a 2-tile-high
-        # gap is always passable regardless of sub-pixel y drift during free fall.
-        tr = int(p.y // TILE)
-        ph_rows = 1 if p.crouching else P_H // TILE
-        return range(tr, tr + ph_rows)
+        # Every tile row the hitbox touches (3 rows when not tile-aligned).
+        # _gap_snap handles squeezing into 2-tile gaps during free fall.
+        return range(int(p.y // TILE), int((p.bottom - 1) // TILE) + 1)
 
     def _try_ledge_grab(self, p, wall_col, blocking_row, wall_dir):
         """Grab when bottom tile hits wall but top tile is open."""
         if p.on_ground or p.state == "hanging" or p.ledge_cd > 0 or p.burrowing:
             return False
         top_row = int(p.y // TILE)
-        if blocking_row == top_row + 1 and not self.world.solid(wall_col, top_row):
+        # Grab when the lowest blocked row is below an open row at head height:
+        # either the player's second row, or the third row their feet dip into.
+        if blocking_row >= top_row + 1 and not self.world.solid(
+            wall_col, blocking_row - 1
+        ):
             # Don't grab a single-block obstacle sitting on solid ground.
             # If the floor exists at blocking_row+1 under the player's column,
             # this ledge is only 1 tile tall and the player can just walk past it.
@@ -721,7 +736,7 @@ class Game:
                 return False
             p.state = "hanging"
             p.hang_wall = wall_dir
-            p.y = float(top_row * TILE)
+            p.y = float((blocking_row - 1) * TILE)
             p.x = float(
                 (wall_col * TILE - P_W) if wall_dir == 1 else (wall_col + 1) * TILE
             )
@@ -808,6 +823,10 @@ class Game:
             br = int(p.bottom // TILE)
             ph = TILE if p.crouching else P_H
             if self.world.solid(lc, br) or self.world.solid(rc, br):
+                if p.vy >= MAX_FALL:
+                    self._burst(
+                        p.x + P_W / 2, br * TILE, 4, (LIGHT_GRAY, DARK_GRAY), speed=0.8
+                    )
                 p.y = float(br * TILE - ph)
                 p.vy = 0.0
                 p.on_ground = True
@@ -849,6 +868,10 @@ class Game:
         p.wall_contact = 0
 
     # ---- death / respawn ----
+
+    def _player_hurt(self, p):
+        self.shake = 8
+        self._burst(p.x + P_W / 2, p.y + P_H / 2, 6, (RED, YELLOW))
 
     def _respawn(self):
         p = self.player
@@ -926,6 +949,8 @@ class Game:
         )
 
         self._tick_player_cooldowns(p)
+        if jump:
+            p.jump_buf = JUMP_BUFFER
 
         inputs = {
             "left": self._left(),
@@ -958,6 +983,10 @@ class Game:
             p.ledge_cd -= 1
         if p.inv_cd > 0:
             p.inv_cd -= 1
+        if p.coyote > 0:
+            p.coyote -= 1
+        if p.jump_buf > 0:
+            p.jump_buf -= 1
 
     def _update_player_movement(self, p, adx, jump, down_p):
         if p.state == "hanging":
@@ -1039,6 +1068,8 @@ class Game:
                     p.climbing = False
         else:
             p.aim_locked = self._aim_lock()
+            if p.on_ground:
+                p.coyote = COYOTE_FRAMES
 
             if p.crouching:
                 # Any of these uncrouches (if headroom allows): move, up, jump, Down-toggle
@@ -1125,11 +1156,13 @@ class Game:
                     p.wj_away_side = eff_wall
 
             if (
-                jump and not p.burrowing and not p.crouching
+                p.jump_buf > 0 and not p.burrowing and not p.crouching
             ):  # crouching uncrouches above
-                if p.on_ground:
+                if p.on_ground or p.coyote > 0:
                     p.vy = JUMP_VEL
                     p.on_ground = False
+                    p.coyote = 0
+                    p.jump_buf = 0
                     p.jump_type = "spin" if adx != 0 else "straight"
                     if p.jump_type == "straight":
                         p.vx = 0.0
@@ -1144,6 +1177,7 @@ class Game:
                         p.jump_type = "spin"
                         p.wj_rise_wall = eff_wall  # track for momentum penalty
                         p.wj_away_window = 0
+                        p.jump_buf = 0
                         p.wj_coyote = 0
                         if eff_wall == -1:
                             p.wj_cd_l = WALL_JUMP_CD
@@ -1232,11 +1266,7 @@ class Game:
                 if hit_enemies is not None and id(e) in hit_enemies:
                     continue
                 if self._hit(b.x, b.y, 2, e):
-                    e.take_damage(FractalBullet.DAMAGE if piercing else 1)
-                    if not e.alive:
-                        for a in p.artifacts:
-                            a.on_kill(p)
-                        self._maybe_drop_canister(e)
+                    self._damage_enemy(e, FractalBullet.DAMAGE if piercing else 1)
                     if piercing:
                         if hit_enemies is not None:
                             hit_enemies.add(id(e))
@@ -1250,12 +1280,8 @@ class Game:
                 continue
             for e in self.enemies:
                 if e.alive and self._hit(mb.x, mb.y, 3, e):
-                    e.take_damage(MissileBullet.DAMAGE)
+                    self._damage_enemy(e, MissileBullet.DAMAGE)
                     e.frozen_timer = MissileBullet.FREEZE_FRAMES
-                    if not e.alive:
-                        for a in p.artifacts:
-                            a.on_kill(p)
-                        self._maybe_drop_canister(e)
                     if mb.synergy_ice_burst:
                         self.ice_fragments.extend(mb.spawn_ice_fragments())
                     mb.alive = False
@@ -1269,12 +1295,8 @@ class Game:
                 continue
             for e in self.enemies:
                 if e.alive and self._hit(frag.x, frag.y, 2, e):
-                    e.take_damage(IceFragment.DAMAGE)
+                    self._damage_enemy(e, IceFragment.DAMAGE)
                     e.frozen_timer = IceFragment.FREEZE_FRAMES
-                    if not e.alive:
-                        for a in p.artifacts:
-                            a.on_kill(p)
-                        self._maybe_drop_canister(e)
                     frag.alive = False
                     break
 
@@ -1300,6 +1322,8 @@ class Game:
         # Update enemies (frozen enemies skip AI/movement)
         for e in self.enemies:
             if e.alive:
+                if e.flash > 0:
+                    e.flash -= 1
                 if e.frozen_timer > 0:
                     e.frozen_timer -= 1
                 else:
@@ -1315,12 +1339,14 @@ class Game:
                 if e.alive and e.frozen_timer == 0 and self._overlaps(p, e):
                     p.hp = max(0, p.hp - e.damage)
                     p.inv_cd = 60
+                    self._player_hurt(p)
                     break
             else:
                 for eb in self.enemy_bullets:
                     if eb.alive and self._hit(eb.x, eb.y, 2, p):
                         p.hp = max(0, p.hp - 1)
                         p.inv_cd = 60
+                        self._player_hurt(p)
                         eb.alive = False
                         break
             if p.hp == 0:
@@ -1348,6 +1374,16 @@ class Game:
                     )
                 c.alive = False
                 break
+
+        # Particles
+        for pt in self.particles:
+            pt[0] += pt[2]
+            pt[1] += pt[3]
+            pt[3] += 0.08
+            pt[4] -= 1
+        self.particles = [pt for pt in self.particles if pt[4] > 0]
+        if self.shake > 0:
+            self.shake -= 1
 
         # Cull dead / off-screen-above objects
         cull_y = self.cam_y - SCREEN_H * 3
@@ -1417,6 +1453,10 @@ class Game:
         cam = self.cam_y
         cam_biome = biome_for_row(int((cam + SCREEN_H * 0.5) // TILE))
         pyxel.cls(_BIOMES[cam_biome][1])
+        if self.shake > 0:
+            pyxel.camera(random.randint(-2, 2), random.randint(-2, 2))
+        else:
+            pyxel.camera()
         first = max(0, int(cam // TILE) - 1)
         last = first + (SCREEN_H // TILE) + 3
 
@@ -1466,6 +1506,11 @@ class Game:
         for c in self.canisters:
             c.draw(cam)
 
+        for x, y, _, _, _, col in self.particles:
+            sy = int(y - cam)
+            if 0 <= sy < SCREEN_H:
+                pyxel.pset(int(x), sy, col)
+
         p = self.player
         px = int(p.x)
         py = int(p.y - cam)
@@ -1507,10 +1552,10 @@ class Game:
             fw = p.facing * 8
             if p.aim_locked:
                 aim_bx = self._AIM_BODY_X.get((p.aim_dx, p.aim_dy), fx)
-                pyxel.blt(px, py,     0, fx,      8,  fw, 8, 0)
-                pyxel.blt(px, py + 8, 0, aim_bx, 24,   8, 8, 0)
+                pyxel.blt(px, py, 0, fx, 8, fw, 8, 0)
+                pyxel.blt(px, py + 8, 0, aim_bx, 24, 8, 8, 0)
             else:
-                pyxel.blt(px, py,     0, fx, 8,  fw, 8, 0)
+                pyxel.blt(px, py, 0, fx, 8, fw, 8, 0)
                 pyxel.blt(px, py + 8, 0, fx, 16, fw, 8, 0)
 
         # Aim reticle: orange box when aim-locked; cyan cross when missile mode
@@ -1529,6 +1574,8 @@ class Game:
                 pyxel.line(rx + 4, ry, rx + 5, ry, 12)
             else:
                 pyxel.rectb(rx - 2, ry - 2, 5, 5, ORANGE)
+
+        pyxel.camera()  # HUD never shakes
 
         # HP HUD — row of 4×4 blocks at bottom-left
         for i in range(p.max_hp):
