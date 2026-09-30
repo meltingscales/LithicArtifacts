@@ -4,8 +4,18 @@ default:
 run:
     uv run python main.py
 
-# Run a self-contained demo from demos/ (e.g. `just demo mechaspider`)
-demo NAME *ARGS="":
+# Run a self-contained demo from demos/ (e.g. `just demo mechaspider --headless`); no name lists them
+demo NAME="" *ARGS="":
+    #!/usr/bin/env sh
+    if [ -z "{{NAME}}" ]; then
+        echo "Available demos (just demo <name> [args]):"
+        for f in demos/*.py; do
+            n=$(basename "$f" .py)
+            d=$(sed -n '2p' "$f" | sed 's/^"""//')
+            printf "  %-14s %s\n" "$n" "$d"
+        done
+        exit 0
+    fi
     uv run python demos/{{NAME}}.py {{ARGS}}
 
 build:
