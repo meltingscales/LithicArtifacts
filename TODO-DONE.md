@@ -1,5 +1,6 @@
 # Done
 
+- Splash: 3 s "controller recommended" notice after the photosensitivity warning (skippable with a button); gamepad icon sprite
 - Bug: MechaspiderLegs climbing jerked on keyboard because Up/K are also jump keys and any jump press released the wall; climbing now releases only on Space / A / B. Demo emulates the real Up-is-jump mapping and flags kick-offs
 - Bug: dying kept inventory, body grid and the looted world; respawn is now a full reset on the same seed (permadeath)
 - Drop lane: dithered column at the tracked artifact's x (behind entities) for horizontal lining-up, white when aligned; startup splash with logo emblem + LITHIC / ARTIFACTS wordmarks and a steady 5 s photosensitivity warning

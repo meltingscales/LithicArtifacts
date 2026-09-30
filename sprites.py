@@ -107,6 +107,7 @@ SHEET = {
     "wordmark-lithic":    (  0, 64),
     "wordmark-artifacts": ( 40, 64),
     "logo-emblem":        ( 96, 64),
+    "icon-gamepad":       (112, 64),
 }
 # fmt: on
 

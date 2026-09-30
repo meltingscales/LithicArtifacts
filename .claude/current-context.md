@@ -18,7 +18,7 @@ See `README.md` and `DESIGN-DECISIONS.md` for locked decisions.
 - Demos: `just demo <name>` runs `demos/<name>.py`; `main.Game` is importable (guarded by `__main__`, call `.run()`), so demos subclass it with a custom `_full_reset` scene and override the `_left/_right/...` input wrappers for scripted input
 - Projectiles/particles are sprites: `sprites.blt_directional(base, ...)` picks `<base>-h/-v/-d` and flips by velocity; `blt_centered` + `frame()` for pulsing 3x3 bullets; particles use `spark-a/b/c` pal-swapped to their colour
 - ARTIFACT warning: `Game.warn_pickup` = nearest uncollected pickup from 0.5 screens above to 1.5 below; first sighting sets `warn_timer` (fullscreen CICADAMATA-style alert, wordmark sprite scaled 2x); right-edge indicator persists while in range
-- Startup splash: `splash_timer` (SPLASH_FRAMES=300) blocks update/draw; logo sprites `logo-emblem`, `wordmark-lithic/-artifacts`; warning text never flashes. Demos zero `splash_timer`
+- Startup splash: `splash_timer` = SPLASH_FRAMES (300, photosensitivity, unskippable) + CONTROLLER_FRAMES (180, controller notice, skippable) blocks update/draw; logo sprites `logo-emblem`, `wordmark-lithic/-artifacts`; warning text never flashes. Demos zero `splash_timer`
 - Drop lane: `_draw_drop_lane` draws a dithered column at the tracked artifact's x behind entities; white when the player is lined up
 - Feel: `COYOTE_FRAMES` / `JUMP_BUFFER` in constants.py; `Game._burst` particles, `Game.shake`, `Enemy.flash` for hit feedback
 - `just run` to launch, `just fmt` to format (uses `uvx ruff`)

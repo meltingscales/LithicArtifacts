@@ -28,6 +28,7 @@ from constants import (
 WHITE      = 7
 WARN_FRAMES = 110   # fullscreen ARTIFACT alert duration
 SPLASH_FRAMES = 300 # logo + photosensitivity warning, 5 s, not skippable
+CONTROLLER_FRAMES = 180  # "controller recommended" notice after it; skippable with a button
 RED        = 8
 BLACK      = 0
 DARK_GRAY  = 5
@@ -110,7 +111,9 @@ class Game:
         # Sound 1: flyer shoot (noise burst with fadeout)
         pyxel.sounds[1].set("a4", "n", "7", "f", 5)
         self.input_device = "kb"  # "kb" | "pad": last device touched; drives hint text
-        self.splash_timer = SPLASH_FRAMES  # startup splash; not reset on respawn
+        self.splash_timer = (
+            SPLASH_FRAMES + CONTROLLER_FRAMES
+        )  # startup splash; not reset on respawn
         # Declare attributes before _full_reset so they always exist
         self.seed = DEFAULT_SEED
         self.player = Player()
@@ -1000,6 +1003,11 @@ class Game:
 
         if self.splash_timer > 0:
             self.splash_timer -= 1
+            # second phase (controller notice) can be skipped with a button
+            if self.splash_timer < CONTROLLER_FRAMES and (
+                self._act_p() or self._jump_btn()
+            ):
+                self.splash_timer = 0
             return
 
         # Death screen
@@ -1633,10 +1641,14 @@ class Game:
         pyxel.text(bx + (bw - len(name) * 4) // 2, by + 14, name, YELLOW)
 
     def _draw_splash(self):
-        """Logo plus a steady (never flashing) photosensitivity warning for SPLASH_FRAMES."""
+        """Logo plus a steady (never flashing) photosensitivity warning for SPLASH_FRAMES,
+        then a controller-recommended notice for CONTROLLER_FRAMES."""
         pyxel.cls(BLACK)
         pyxel.rectb(2, 2, SCREEN_W - 4, SCREEN_H - 4, DARK_GRAY)
         cxm = SCREEN_W // 2
+        if self.splash_timer <= CONTROLLER_FRAMES:
+            self._draw_controller_notice(cxm)
+            return
         u, v, w, h = SPR["logo-emblem"]
         pyxel.blt(cxm - w // 2, 10, 0, u, v, w, h, 0)
         # wordmarks at 2x; blt(scale=2) scales about the sprite centre
@@ -1658,7 +1670,28 @@ class Game:
         for i, ln in enumerate(self._wrap(body, 50)):
             pyxel.text(cxm - len(ln) * 2, 92 + i * 8, ln, LIGHT_GRAY)
         # steady countdown bar
-        frac = self.splash_timer / SPLASH_FRAMES
+        frac = (self.splash_timer - CONTROLLER_FRAMES) / SPLASH_FRAMES
+        pyxel.rect(16, SCREEN_H - 12, int((SCREEN_W - 32) * frac), 2, DARK_GRAY)
+
+    def _draw_controller_notice(self, cxm):
+        u, v, w, h = SPR["icon-gamepad"]
+        pyxel.blt(cxm - w, 28, 0, u, v, w, h, 0, 0, 2)
+        pyxel.text(cxm - 46, 54, "CONTROLLER RECOMMENDED", WHITE)
+        body = (
+            "Lithic Artifacts is built around a gamepad: 8-way aim lock, "
+            "missile hold and a dedicated jump button. Keyboard works, "
+            "but Up doubles as Jump and the modifier holds stack up."
+        )
+        for i, ln in enumerate(self._wrap(body, 50)):
+            pyxel.text(cxm - len(ln) * 2, 68 + i * 8, ln, LIGHT_GRAY)
+        pyxel.text(cxm - 34, 104, "Keybinds: Pause menu", DARK_GRAY)
+        pyxel.text(
+            cxm - 44,
+            SCREEN_H - 22,
+            self._hint("Space / Z  continue", "A  continue"),
+            DARK_GRAY,
+        )
+        frac = self.splash_timer / CONTROLLER_FRAMES
         pyxel.rect(16, SCREEN_H - 12, int((SCREEN_W - 32) * frac), 2, DARK_GRAY)
 
     def _draw_death(self):
