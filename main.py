@@ -27,6 +27,7 @@ from constants import (
 # fmt: off
 WHITE      = 7
 WARN_FRAMES = 110   # fullscreen ARTIFACT alert duration
+SPLASH_FRAMES = 300 # logo + photosensitivity warning, 5 s, not skippable
 RED        = 8
 BLACK      = 0
 DARK_GRAY  = 5
@@ -109,6 +110,7 @@ class Game:
         # Sound 1: flyer shoot (noise burst with fadeout)
         pyxel.sounds[1].set("a4", "n", "7", "f", 5)
         self.input_device = "kb"  # "kb" | "pad": last device touched; drives hint text
+        self.splash_timer = SPLASH_FRAMES  # startup splash; not reset on respawn
         # Declare attributes before _full_reset so they always exist
         self.seed = DEFAULT_SEED
         self.player = Player()
@@ -1017,6 +1019,10 @@ class Game:
     def update(self):
         self._track_input_device()
 
+        if self.splash_timer > 0:
+            self.splash_timer -= 1
+            return
+
         # Death screen
         if self.dead:
             if self.death_timer > 0:
@@ -1553,6 +1559,28 @@ class Game:
         if self.biome_banner_timer > 0:
             self.biome_banner_timer -= 1
 
+    def _draw_drop_lane(self, p):
+        """Column at the tracked artifact's x, drawn behind entities, so the player
+        can line up horizontally while falling. Red and flashing while off-line,
+        solid white once the player's centre is inside it. Ticks scroll downward."""
+        pu = self.warn_pickup
+        if pu is None:
+            return
+        hot = RED if (pyxel.frame_count // 4) % 2 == 0 else WHITE
+        lx = int(pu.x)
+        ly0, ly1 = 10, SCREEN_H - 14
+        aligned = lx <= p.x + P_W / 2 < lx + TILE
+        lane = WHITE if aligned else hot
+        pyxel.dither(0.25)
+        pyxel.rect(lx, ly0, TILE, ly1 - ly0, lane)
+        pyxel.dither(1.0)
+        if aligned:
+            pyxel.line(lx, ly0, lx, ly1, lane)
+            pyxel.line(lx + TILE - 1, ly0, lx + TILE - 1, ly1, lane)
+        for ty in range(ly0 + (pyxel.frame_count // 2) % 8, ly1, 8):
+            pyxel.line(lx + 2, ty, lx + TILE - 3, ty, lane)
+        pyxel.tri(lx, ly0 - 4, lx + TILE - 1, ly0 - 4, lx + TILE // 2, ly0, lane)
+
     def _draw_artifact_warning(self, p):
         """CICADAMATA-style alert: flashing full-screen frame + ARTIFACT wordmark for
         WARN_FRAMES after a pickup enters range, then a persistent edge indicator."""
@@ -1624,6 +1652,35 @@ class Game:
         pyxel.text(bx + (bw - len(label) * 4) // 2, by + 5, label, DARK_GRAY)
         pyxel.text(bx + (bw - len(name) * 4) // 2, by + 14, name, YELLOW)
 
+    def _draw_splash(self):
+        """Logo plus a steady (never flashing) photosensitivity warning for SPLASH_FRAMES."""
+        pyxel.cls(BLACK)
+        pyxel.rectb(2, 2, SCREEN_W - 4, SCREEN_H - 4, DARK_GRAY)
+        cxm = SCREEN_W // 2
+        u, v, w, h = SPR["logo-emblem"]
+        pyxel.blt(cxm - w // 2, 10, 0, u, v, w, h, 0)
+        # wordmarks at 2x; blt(scale=2) scales about the sprite centre
+        for name, cy, col in (
+            ("wordmark-lithic", 40, LIGHT_GRAY),
+            ("wordmark-artifacts", 58, YELLOW),
+        ):
+            u, v, w, h = SPR[name]
+            pyxel.pal(WHITE, col)
+            pyxel.blt(cxm - w // 2, cy - h // 2, 0, u, v, w, h, 0, 0, 2)
+            pyxel.pal()
+        pyxel.line(16, 74, SCREEN_W - 17, 74, DARK_GRAY)
+        pyxel.text(cxm - 48, 80, "PHOTOSENSITIVITY WARNING", WHITE)
+        body = (
+            "This game contains flashing lights and rapid colour changes "
+            "that may trigger seizures in people with photosensitive epilepsy. "
+            "Player discretion is advised."
+        )
+        for i, ln in enumerate(self._wrap(body, 50)):
+            pyxel.text(cxm - len(ln) * 2, 92 + i * 8, ln, LIGHT_GRAY)
+        # steady countdown bar
+        frac = self.splash_timer / SPLASH_FRAMES
+        pyxel.rect(16, SCREEN_H - 12, int((SCREEN_W - 32) * frac), 2, DARK_GRAY)
+
     def _draw_death(self):
         pyxel.cls(BLACK)
         cx = SCREEN_W // 2
@@ -1638,6 +1695,9 @@ class Game:
             )
 
     def draw(self):
+        if self.splash_timer > 0:
+            self._draw_splash()
+            return
         if self.dead:
             self._draw_death()
             return
@@ -1645,6 +1705,7 @@ class Game:
             self._draw_pause()
             return
 
+        p = self.player
         cam = self.cam_y
         cam_biome = biome_for_row(int((cam + SCREEN_H * 0.5) // TILE))
         pyxel.cls(_BIOMES[cam_biome][1])
@@ -1691,6 +1752,8 @@ class Game:
             if isinstance(a, FractalBlaster):
                 a.draw_bg(_BIOMES[cam_biome][1])
                 break
+
+        self._draw_drop_lane(p)
 
         for b in self.bullets:
             b.draw(cam)

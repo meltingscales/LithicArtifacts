@@ -103,6 +103,10 @@ SHEET = {
     "spark-c":        ( 88, 48),
     # y=56: UI wordmarks
     "wordmark-artifact": (  0, 56),
+    # y=64: splash logo
+    "wordmark-lithic":    (  0, 64),
+    "wordmark-artifacts": ( 40, 64),
+    "logo-emblem":        ( 96, 64),
 }
 # fmt: on
 

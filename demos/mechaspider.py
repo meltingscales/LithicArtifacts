@@ -76,6 +76,7 @@ class Demo(Game):
         self.frame = 0
         self.trace = []
         super().__init__()
+        self.splash_timer = 0  # demos skip the startup splash
 
     # ---- scene ----
 
