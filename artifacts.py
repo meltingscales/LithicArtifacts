@@ -204,7 +204,6 @@ class MechaspiderLegs(Artifact):
         self._step_to        = [(0.0, 0.0)] * self._N_LEGS
         self._tick           = 0
         self._wall_side      = 1    # 1=right, -1=left; set on grip
-        self._grip_edge_x    = 0.0  # player edge x at grip start; fallback bound
         # fmt: on
 
     # ---- helpers ----
@@ -228,56 +227,64 @@ class MechaspiderLegs(Artifact):
         """
         ws = self._wall_side
         shoulder_x = player.right if ws == 1 else player.x
-        scol = int(shoulder_x // _TILE)
+        # First column on the wall side of the shoulder
+        scol = int(shoulder_x // _TILE) if ws == 1 else int(shoulder_x // _TILE) - 1
         srow = int(preferred_y // _TILE)
         R = self._LEG_REACH
         max_reach = R * _TILE
 
         best = None
         best_dist = float("inf")
-        for dc in range(-R, R + 1):
+        for dc in range(0, R + 1):  # wall side only; never behind the body
             for dr in range(-R, R + 1):
-                c, r = scol + dc, srow + dr
+                c, r = scol + dc * ws, srow + dr
                 if not world.solid(c, r):
                     continue
                 x0, y0, hT = c * _TILE, r * _TILE, _TILE * 0.5
-                for fx, fy in (
-                    (x0, y0 + hT),  # left face
-                    (x0 + _TILE, y0 + hT),  # right face
-                    (x0 + hT, y0),  # top face
-                    (x0 + hT, y0 + _TILE),  # bottom face
+                for fx, fy, nc, nr in (
+                    (x0, y0 + hT, c - 1, r),  # left face
+                    (x0 + _TILE, y0 + hT, c + 1, r),  # right face
+                    (x0 + hT, y0, c, r - 1),  # top face
+                    (x0 + hT, y0 + _TILE, c, r + 1),  # bottom face
                 ):
+                    if world.solid(nc, nr):
+                        continue  # face buried inside the wall mass
                     dist = math.sqrt((fx - shoulder_x) ** 2 + (fy - preferred_y) ** 2)
                     if dist < best_dist and dist <= max_reach:
                         best_dist = dist
                         best = (fx, fy)
         return best
 
-    def _has_wall_grip(self, player):
-        """True if any anchored foot is within leg reach of the current shoulder.
+    def _wall_col(self, player):
+        """Tile column immediately beyond the player's wall-side edge."""
+        if self._wall_side == 1:
+            return int(player.right // _TILE)
+        return int((player.x - 1) // _TILE)
 
-        Progressive traversal: as the player moves toward a tile, their shoulder
-        gets closer and legs can reach the next tile from there.
-        """
-        ws = self._wall_side
-        shoulder_x = player.right if ws == 1 else player.x
-        max_reach = self._LEG_REACH * _TILE
-        for i in range(self._N_LEGS):
-            if self._foot_anchored[i]:
-                fx, fy = self._feet[i]
-                if (
-                    math.sqrt(
-                        (fx - shoulder_x) ** 2 + (fy - (player.y + _P_H * 0.5)) ** 2
-                    )
-                    <= max_reach
-                ):
-                    return True
-        # Fallback: within reach of the initial wall
-        return abs(shoulder_x - self._grip_edge_x) <= max_reach
+    def _has_wall_grip(self, player, world):
+        """True if solid wall sits beside the body (one row of tolerance above
+        and below, so legs can span a 2-tile gap and reach over a top edge)."""
+        col = self._wall_col(player)
+        top = int(player.y // _TILE)
+        bot = int((player.bottom - 1) // _TILE)
+        if any(world.solid(col, r) for r in range(top, bot + 1)):
+            return True
+        # Tolerance rows count only when they are wall, not a ceiling/floor slab
+        # that also covers the player's own column.
+        pc = int((player.x + _TILE * 0.5) // _TILE)
+        return any(
+            world.solid(col, r) and not world.solid(pc, r) for r in (top - 1, bot + 1)
+        )
+
+    def _crested(self, player, world):
+        """True if solid ground is directly under the feet (we moved over the wall top)."""
+        br = int(player.bottom // _TILE)
+        lc = int((player.x + 1) // _TILE)
+        rc = int((player.right - 2) // _TILE)
+        return world.solid(lc, br) or world.solid(rc, br)
 
     def _init_feet(self, player, world):
         self._wall_side = player.wall_contact
-        self._grip_edge_x = player.right if player.wall_contact == 1 else player.x
         for i in range(self._N_LEGS):
             pref_x, pref_y = self._preferred_foot(player, i)
             anchor = self._find_anchor(player, world, pref_y)
@@ -293,7 +300,12 @@ class MechaspiderLegs(Artifact):
     def on_frame(self, player, world, inputs):
         self._tick += 1
 
-        if not player.climbing and player.wall_contact != 0 and not player.on_ground:
+        if (
+            not player.climbing
+            and player.state != "hanging"
+            and player.wall_contact != 0
+            and not player.on_ground
+        ):
             wd = player.wall_contact
             pressing = (wd == 1 and inputs["right"]) or (wd == -1 and inputs["left"])
             if pressing:

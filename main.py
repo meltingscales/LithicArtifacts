@@ -111,6 +111,8 @@ class Game:
         self.seed = DEFAULT_SEED
         self.player = Player()
         self._full_reset(DEFAULT_SEED)
+
+    def run(self):
         pyxel.run(self.update, self.draw)
 
     def _full_reset(self, seed=DEFAULT_SEED):
@@ -689,7 +691,13 @@ class Game:
 
     def _try_ledge_grab(self, p, wall_col, blocking_row, wall_dir):
         """Grab when bottom tile hits wall but top tile is open."""
-        if p.on_ground or p.state == "hanging" or p.ledge_cd > 0 or p.burrowing:
+        if (
+            p.on_ground
+            or p.state == "hanging"
+            or p.ledge_cd > 0
+            or p.burrowing
+            or p.climbing
+        ):
             return False
         top_row = int(p.y // TILE)
         # Grab when the lowest blocked row is below an open row at head height:
@@ -725,8 +733,8 @@ class Game:
         with a gap in wall_col that fits their full height.  Only snaps when the
         gap is framed by solid tiles above and below (rules out 1-tile steps).
         """
-        if p.on_ground:
-            return False  # walking on flat ground — don't auto-align
+        if p.on_ground or p.climbing:
+            return False  # walking on flat ground or wall-climbing — don't auto-align
         GAP_SNAP = 6
         ph_rows = 1 if p.crouching else P_H // TILE
         for dy in range(1, GAP_SNAP + 1):
@@ -1027,16 +1035,20 @@ class Game:
                 )
                 prev_x = p.x
                 self._move_x(p)
-                if _msl and not _msl._has_wall_grip(p):
+                # Sideways move must keep a wall beside us, unless we just crested
+                # the top edge (solid right under our feet) — then let go and land.
+                if _msl and not (
+                    _msl._has_wall_grip(p, self.world) or _msl._crested(p, self.world)
+                ):
                     p.x = prev_x
                     p.vx = 0.0
                 prev_y = p.y
                 self._move_y(p)
-                if _msl and not _msl._has_wall_grip(p):
+                if _msl and not _msl._has_wall_grip(p, self.world):
                     p.y = prev_y
                     p.vy = 0.0
                 self._probe_walls(p)
-                if p.on_ground:
+                if p.on_ground or (_msl and not _msl._has_wall_grip(p, self.world)):
                     p.climbing = False
         else:
             p.aim_locked = self._aim_lock()
@@ -1580,4 +1592,5 @@ class Game:
             self._draw_debug()
 
 
-Game()
+if __name__ == "__main__":
+    Game().run()

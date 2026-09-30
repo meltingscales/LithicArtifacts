@@ -1,7 +1,7 @@
 # TODO
 
 ## Bugs
-- MechaspiderLegs: strange rendering/snapping bugs while wall-climbing. Diagnose with a self-contained simulation under `demos/` (run via `just demo <name>`) with debug overlays before touching artifacts.py.
+<!--None yet.-->
 
 ## Gameplay
 - Difficulty scaling: adjust enemy density / type and artifact quality by floor depth
