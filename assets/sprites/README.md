@@ -34,7 +34,9 @@ Adding a sprite = write the PPM, add one line to `SHEET`, use `SPR[name]`.
   of body tile); 16x8 for wide fliers. Wide sprites are centred over an 8x8 hitbox.
 - Author facing **right**. Code flips with a negative blit width.
 - Tiles use canonical roles: 5 = fill, 6 = edge/highlight, 1 = shadow. `main.py`
-  palette-swaps 5 and 6 per biome, so one tile set serves every biome.
+  palette-swaps 5 and 6 per biome, so one tile set serves every biome. Variants:
+  `tile-top` (open above), `tile-side` (open on the left; flipped for right),
+  `tile-fill` (enclosed), `tile-rock` (cave, tile type 2).
 - Keep silhouettes readable at 1x: one colour for the mass, one for a highlight,
   one accent. Three colours beat six.
 - Player things lean yellow/orange, hostile things red/dark, world tiles gray.

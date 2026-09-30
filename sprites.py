@@ -44,6 +44,7 @@ SHEET = {
     "tile-fill":          ( 88,  0),
     "tile-top":           ( 96,  0),
     "tile-rock":          (104,  0),
+    "tile-side":          (112,  0),
 
     "player-c":               (  0,  8),
     "player-c-walk-a":        (  8,  8),

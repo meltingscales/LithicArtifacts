@@ -1592,12 +1592,22 @@ class Game:
                         pyxel.pal(DARK_GRAY, cf)
                         pyxel.pal(LIGHT_GRAY, cb)
                         u, v, _, _ = SPR["tile-rock"]
+                        w = TILE
                     else:  # platform / side wall (type 1)
                         pyxel.pal(DARK_GRAY, wf)
                         pyxel.pal(LIGHT_GRAY, wb)
-                        exposed = self.world.tiles.get((col, row - 1), 0) == 0
-                        u, v, _, _ = SPR["tile-top" if exposed else "tile-fill"]
-                    pyxel.blt(sx, sy, 0, u, v, TILE, TILE)
+                        tiles = self.world.tiles
+                        w = TILE
+                        if tiles.get((col, row - 1), 0) == 0:
+                            u, v, _, _ = SPR["tile-top"]
+                        elif tiles.get((col - 1, row), 0) == 0:
+                            u, v, _, _ = SPR["tile-side"]
+                        elif tiles.get((col + 1, row), 0) == 0:
+                            u, v, _, _ = SPR["tile-side"]
+                            w = -TILE  # flip: open side on the right
+                        else:
+                            u, v, _, _ = SPR["tile-fill"]
+                    pyxel.blt(sx, sy, 0, u, v, w, TILE)
         pyxel.pal()
 
         # Fractal Blaster background overlay (dithered, drawn above tiles but below entities)

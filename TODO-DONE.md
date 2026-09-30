@@ -1,5 +1,6 @@
 # Done
 
+- Tile and pickup sprites redrawn: riveted plating tile set (fill / top lip / new side-face variant, flipped for right edges) palette-swapped per biome, nodular cave rock; missile canister and all seven artifact icons redrawn with a 1px margin inside the pickup box
 - Pause menu: Tab/Start opens Body & Inventory / Keybinds / Quit; body panel is a sub-screen (Esc backs out to the menu); Q quit key removed; all hints and the Keybinds screen follow the last-used input device (keyboard vs gamepad); enemy sprites redrawn (beetle crawler, moth-like flyer, shooty flier with gun arm)
 - Player sprite set reworked from scratch (all 26 PPMs): armored explorer with blue visor, orange collar/cannon, 2px legs; spin jump is a rotating curled ball; aim, hang-aim, crouch, climb and burrow bodies redrawn to match
 - Bug: MechaspiderLegs snapping/floating — ledge grab and gap-snap fired from `_move_x` mid-climb (7px snap + climbing/hanging state conflict), and the grip test only checked horizontal distance so the player could climb through gaps and across open air; grip now requires wall beside the body (±1 row, ceilings/floors excluded), leg anchors restricted to exposed faces on the wall side, cresting the top lands the player. Reproduced and verified with `just demo mechaspider --headless`
