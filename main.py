@@ -1556,7 +1556,18 @@ class Game:
             return
         hot = RED if (pyxel.frame_count // 4) % 2 == 0 else WHITE
         lx = int(pu.x)
-        ly0, ly1 = 10, SCREEN_H - 14
+        # Full screen height (overdraws past the edges), but stops at the artifact
+        # tile: runs from the screen edge on the player's side down/up to it.
+        psy = int(pu.y - self.cam_y)
+        if psy >= p.y - self.cam_y:
+            ly0, ly1 = -TILE, psy  # artifact below: lane ends at its top edge
+        else:
+            ly0, ly1 = (
+                psy + TILE,
+                SCREEN_H + TILE,
+            )  # artifact above: lane starts under it
+        if ly1 <= ly0:
+            return
         aligned = lx <= p.x + P_W / 2 < lx + TILE
         lane = WHITE if aligned else hot
         pyxel.dither(0.25)
@@ -1567,7 +1578,6 @@ class Game:
             pyxel.line(lx + TILE - 1, ly0, lx + TILE - 1, ly1, lane)
         for ty in range(ly0 + (pyxel.frame_count // 2) % 8, ly1, 8):
             pyxel.line(lx + 2, ty, lx + TILE - 3, ty, lane)
-        pyxel.tri(lx, ly0 - 4, lx + TILE - 1, ly0 - 4, lx + TILE // 2, ly0, lane)
 
     def _draw_artifact_warning(self, p):
         """CICADAMATA-style alert: flashing full-screen frame + ARTIFACT wordmark for
