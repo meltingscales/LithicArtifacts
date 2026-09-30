@@ -1,5 +1,6 @@
 # Done
 
+- Bug: dying kept inventory, body grid and the looted world; respawn is now a full reset on the same seed (permadeath)
 - Drop lane: dithered column at the tracked artifact's x (behind entities) for horizontal lining-up, white when aligned; startup splash with logo emblem + LITHIC / ARTIFACTS wordmarks and a steady 5 s photosensitivity warning
 - Bullets and particles are sprites (directional bullet/missile sets, pulsing fractal/splinter/ice/enemy bullets, 3-stage spark particles); fullscreen CICADAMATA-style ARTIFACT warning with wordmark sprite and a right-edge vertical indicator while an artifact is within range; CICADAMATA added to inspirations
 - Tile and pickup sprites redrawn: riveted plating tile set (fill / top lip / new side-face variant, flipped for right edges) palette-swapped per biome, nodular cave rock; missile canister and all seven artifact icons redrawn with a 1px margin inside the pickup box

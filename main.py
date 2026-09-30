@@ -980,31 +980,9 @@ class Game:
         self._burst(p.x + P_W / 2, p.y + P_H / 2, 6, (RED, YELLOW))
 
     def _respawn(self):
-        p = self.player
-        # fmt: off
-        p.x          = float(SCREEN_W // 2 - P_W // 2)
-        p.y          = float(TILE * 2)
-        p.vx         = 0.0
-        p.vy         = 0.0
-        p.hp         = p.max_hp
-        p.inv_cd     = 0
-        p.state      = "normal"
-        p.crouching  = False
-        p.burrowing  = False
-        p.climbing   = False
-        p.on_ground  = False
-        # fmt: on
-        # fmt: off
-        self.enemies         = []
-        self.enemy_bullets   = []
-        self.bullets         = []
-        self.missile_bullets = []
-        self.ice_fragments   = []
-        self.canisters       = []
-        self.cam_y           = 0.0
-        self.dead            = False
-        self.death_timer     = 0
-        # fmt: on
+        """Permadeath: a new run on the same seed. Drops inventory, body grid and
+        equipped artifacts, and regenerates the world so pickups return."""
+        self._full_reset(self.seed)
 
     # ---- update / draw ----
 
