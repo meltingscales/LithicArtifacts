@@ -1,0 +1,7 @@
+P3
+# bullet-h: Player bullet moving right: orange tracer, white nose, fading tail. Flipped/transposed in code.
+7 3
+255
+0 0 0  0 0 0  0 0 0  255 163 0  255 163 0  255 236 39  255 241 232
+171 82 54  255 163 0  255 163 0  255 163 0  255 236 39  255 236 39  255 241 232
+0 0 0  0 0 0  0 0 0  255 163 0  255 163 0  255 236 39  255 241 232

@@ -33,6 +33,10 @@ Adding a sprite = write the PPM, add one line to `SHEET`, use `SPR[name]`.
 - Sizes: 8x8 for tiles, enemies, icons; 8x16 for the player (head tile on top
   of body tile); 16x8 for wide fliers. Wide sprites are centred over an 8x8 hitbox.
 - Author facing **right**. Code flips with a negative blit width.
+- Projectiles come as a set: `<name>-h` moving right, `<name>-v` moving down,
+  `<name>-d` moving down-right; `sprites.blt_directional` flips them for the other
+  five directions. Particles (`spark-*`) are authored in white (7) and palette-swapped.
+- UI wordmarks (`wordmark-*`) are white block caps, scaled 2x at draw time.
 - Tiles use canonical roles: 5 = fill, 6 = edge/highlight, 1 = shadow. `main.py`
   palette-swaps 5 and 6 per biome, so one tile set serves every biome. Variants:
   `tile-top` (open above), `tile-side` (open on the left; flipped for right),

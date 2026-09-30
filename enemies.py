@@ -10,7 +10,7 @@ import random
 
 import pyxel
 
-from sprites import SPR
+from sprites import SPR, blt_centered, frame
 
 # fmt: off
 from constants import (
@@ -52,7 +52,9 @@ class EnemyBullet:
     def draw(self, cam):
         sy = int(self.y - cam)
         if 0 <= sy < _SCREEN_H:
-            pyxel.rect(int(self.x), sy, 2, 2, _RED)
+            blt_centered(
+                frame(("enemy-bullet-a", "enemy-bullet-b"), 3), self.x + 1, sy + 1
+            )
 
 
 # ---------------------------------------------------------------------------

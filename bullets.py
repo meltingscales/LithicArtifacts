@@ -2,6 +2,8 @@ import math
 import random
 import pyxel
 
+from sprites import blt_centered, blt_directional, frame
+
 # fmt: off
 from constants import (
     TILE, SCREEN_H,
@@ -41,7 +43,7 @@ class Bullet:
     def draw(self, cam):
         sy = int(self.y - cam)
         if 0 <= sy < SCREEN_H:
-            pyxel.rect(int(self.x), sy, 2, 2, ORANGE)
+            blt_directional("bullet", self.x + 1, sy + 1, self.vx, self.vy)
 
 
 class MissileBullet:
@@ -79,9 +81,7 @@ class MissileBullet:
     def draw(self, cam):
         sy = int(self.y - cam)
         if 0 <= sy < SCREEN_H:
-            x = int(self.x)
-            pyxel.rect(x, sy, 3, 3, 12)  # cyan body
-            pyxel.pset(x + 1, sy + 1, 7)  # white center pixel
+            blt_directional("missile", self.x + 1, sy + 1, self.vx, self.vy)
 
     def spawn_ice_fragments(self):
         """Return 8 IceFragment instances fanning out from this missile's position."""
@@ -132,10 +132,7 @@ class IceFragment:
     def draw(self, cam):
         sy = int(self.y - cam)
         if 0 <= sy < SCREEN_H:
-            # Alternate cyan/white to give sparkle effect
-            col = 12 if (self.life % 4) < 2 else 7
-            pyxel.pset(int(self.x), sy, col)
-            pyxel.pset(int(self.x) + 1, sy, col)
+            blt_centered(frame(("ice-shard-a", "ice-shard-b"), 2), self.x + 1, sy)
 
 
 class FractalBullet:
@@ -236,8 +233,7 @@ class FractalBullet:
     def draw(self, cam):
         sy = int(self.y - cam)
         if 0 <= sy < SCREEN_H:
-            col = 12 if (pyxel.frame_count // 3) % 2 else 13  # cyan / indigo pulse
-            pyxel.rect(int(self.x), sy, 3, 3, col)
+            blt_centered(frame(("fractal-a", "fractal-b"), 3), self.x + 1, sy + 1)
 
 
 class FractalBulletSmall:
@@ -272,5 +268,4 @@ class FractalBulletSmall:
     def draw(self, cam):
         sy = int(self.y - cam)
         if 0 <= sy < SCREEN_H:
-            col = 14 if (pyxel.frame_count // 4) % 2 else 8  # pink / red pulse
-            pyxel.rect(int(self.x), sy, 2, 2, col)
+            blt_centered(frame(("splinter-a", "splinter-b"), 4), self.x + 1, sy + 1)

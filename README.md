@@ -2,7 +2,7 @@
 
 A tiny roguelike about finding cursed body modifications and breaking yourself in interesting ways.
 
-Inspired by **Caves of Qud**, **Made in Abyss**, **Metroid Fusion**, **Downwell**, **the original Rogue**, and **LithicRivers**.
+Inspired by **Caves of Qud**, **Made in Abyss**, **Metroid Fusion**, **Downwell**, **the original Rogue**, **CICADAMATA**, and **LithicRivers**.
 
 See [DESIGN-DECISIONS.md](DESIGN-DECISIONS.md) for locked design decisions and rationale.
 

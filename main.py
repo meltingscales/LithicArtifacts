@@ -11,7 +11,7 @@ from player    import Player, P_W, P_H
 from synergies   import all_synergy_pairs, fractal_wallbreaker_active, rocketfin_ice_active
 from world       import World
 import sprites
-from sprites     import SPR, PALETTE
+from sprites     import SPR, PALETTE, blt_centered
 from constants import (
     SCREEN_W, SCREEN_H, TILE, COLS,
     PREAMBLE_ROWS, SECTION_H, BIOME_SECTION_LEN,
@@ -26,6 +26,7 @@ from constants import (
 
 # fmt: off
 WHITE      = 7
+WARN_FRAMES = 110   # fullscreen ARTIFACT alert duration
 RED        = 8
 BLACK      = 0
 DARK_GRAY  = 5
@@ -128,6 +129,8 @@ class Game:
         self.ice_fragments       = []
         self.canisters           = []
         self.particles           = []   # [x, y, vx, vy, life, col]
+        self.warn_pickup         = None # nearest uncollected artifact in the warning window
+        self.warn_timer          = 0    # frames left on the fullscreen ARTIFACT alert
         self.shake               = 0    # screen-shake frames remaining
         self.cam_y               = 0.0
         # Pause / body-panel state
@@ -1489,6 +1492,22 @@ class Game:
                 c.alive = False
                 break
 
+        # ARTIFACT warning: nearest uncollected pickup from half a screen above
+        # to 1.5 screens below the player. New entries trigger the fullscreen alert.
+        self.warn_pickup = None
+        best = None
+        for pu in self.world.pickups:
+            rel = pu.y - p.y
+            if pu.collected or not (-SCREEN_H * 0.5 <= rel <= SCREEN_H * 1.5):
+                continue
+            if best is None or abs(rel) < best:
+                best, self.warn_pickup = abs(rel), pu
+        if self.warn_pickup is not None and not self.warn_pickup.warned:
+            self.warn_pickup.warned = True
+            self.warn_timer = WARN_FRAMES
+        if self.warn_timer > 0:
+            self.warn_timer -= 1
+
         # Particles
         for pt in self.particles:
             pt[0] += pt[2]
@@ -1533,6 +1552,63 @@ class Game:
             self.biome_trigger_cd -= 1
         if self.biome_banner_timer > 0:
             self.biome_banner_timer -= 1
+
+    def _draw_artifact_warning(self, p):
+        """CICADAMATA-style alert: flashing full-screen frame + ARTIFACT wordmark for
+        WARN_FRAMES after a pickup enters range, then a persistent edge indicator."""
+        pu = self.warn_pickup
+        if pu is None:
+            return
+        cam = self.cam_y
+        flash = (pyxel.frame_count // 4) % 2 == 0
+        hot = RED if flash else WHITE
+        # -- vertical indicator on the right edge: track + marker at the artifact's height
+        tx = SCREEN_W - 5
+        ty0, ty1 = 12, SCREEN_H - 14
+        pyxel.line(tx, ty0, tx, ty1, DARK_GRAY)
+        sy = pu.y + TILE / 2 - cam
+        if sy < ty0:
+            pyxel.tri(tx - 2, ty0 + 3, tx + 2, ty0 + 3, tx, ty0, hot)
+        elif sy > ty1:
+            pyxel.tri(tx - 2, ty1 - 3, tx + 2, ty1 - 3, tx, ty1, hot)
+        else:
+            pyxel.rect(tx - 2, int(sy) - 1, 5, 3, hot)
+            pyxel.pset(tx, int(sy), BLACK)
+        if self.warn_timer <= 0:
+            return
+        # -- fullscreen alert
+        col = hot if self.warn_timer > WARN_FRAMES // 3 else WHITE
+        pyxel.rectb(0, 0, SCREEN_W, SCREEN_H, col)
+        pyxel.rectb(2, 2, SCREEN_W - 4, SCREEN_H - 4, col)
+        # hazard bands: dithered stripes top and bottom (clear of the floor counter and HP bar)
+        pyxel.dither(0.5)
+        pyxel.rect(4, 4, SCREEN_W - 32, 4, col)
+        pyxel.rect(4, SCREEN_H - 13, SCREEN_W - 8, 4, col)
+        pyxel.dither(1.0)
+        # corner brackets
+        for cx, cy, dx, dy in (
+            (6, 10, 1, 1),
+            (SCREEN_W - 7, 10, -1, 1),
+            (6, SCREEN_H - 16, 1, -1),
+            (SCREEN_W - 7, SCREEN_H - 16, -1, -1),
+        ):
+            pyxel.line(cx, cy, cx + 8 * dx, cy, col)
+            pyxel.line(cx, cy, cx, cy + 8 * dy, col)
+        # wordmark at 2x on a black plate. blt(scale=2) scales about the sprite's
+        # centre, so position by centre: (cxm, cym).
+        u, v, w, h = SPR["wordmark-artifact"]
+        cxm, cym = SCREEN_W // 2, 34 + h
+        pyxel.rect(cxm - w - 6, cym - h - 6, w * 2 + 12, h * 2 + 12, BLACK)
+        pyxel.rectb(cxm - w - 6, cym - h - 6, w * 2 + 12, h * 2 + 12, col)
+        pyxel.pal(WHITE, col)
+        pyxel.blt(cxm - w // 2, cym - h // 2, 0, u, v, w, h, 0, 0, 2)
+        pyxel.pal()
+        rows = int((pu.y - p.y) // TILE)
+        where = "BELOW" if rows > 0 else "ABOVE" if rows < 0 else "HERE"
+        msg = f"SIGNAL {where}  {abs(rows):02d} ROWS"
+        ty = cym + h + 12
+        pyxel.rect(cxm - len(msg) * 2 - 3, ty - 2, len(msg) * 4 + 6, 9, BLACK)
+        pyxel.text(cxm - len(msg) * 2, ty, msg, col)
 
     def _draw_biome_banner(self):
         name = self.biome_banner_name
@@ -1637,10 +1713,16 @@ class Game:
         for c in self.canisters:
             c.draw(cam)
 
-        for x, y, _, _, _, col in self.particles:
+        for x, y, _, _, life, col in self.particles:
             sy = int(y - cam)
             if 0 <= sy < SCREEN_H:
-                pyxel.pset(int(x), sy, col)
+                pyxel.pal(WHITE, col)
+                blt_centered(
+                    "spark-a" if life > 12 else "spark-b" if life > 5 else "spark-c",
+                    x,
+                    sy,
+                )
+        pyxel.pal()
 
         p = self.player
         px = int(p.x)
@@ -1727,6 +1809,8 @@ class Game:
         floor_num = max(1, (player_row - PREAMBLE_ROWS) // SECTION_H + 1)
         floor_str = f"B{floor_num:02d}"
         pyxel.text(SCREEN_W - len(floor_str) * 4 - 4, 4, floor_str, DARK_GRAY)
+
+        self._draw_artifact_warning(p)
 
         if self.biome_banner_timer > 0:
             self._draw_biome_banner()

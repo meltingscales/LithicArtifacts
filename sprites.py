@@ -82,10 +82,62 @@ SHEET = {
     "art-vampiric-cape":      ( 32, 40),
     "art-mechaspider-legs":   ( 40, 40),
     "art-fractal-blaster":    ( 48, 40),
+
+    # y=48: projectiles and particles (h = moving right, v = moving down, d = down-right; flipped in code)
+    "bullet-h":       (  0, 48),
+    "bullet-v":       (  8, 48),
+    "bullet-d":       ( 16, 48),
+    "missile-h":      ( 24, 48),
+    "missile-v":      ( 32, 48),
+    "missile-d":      ( 40, 48),
+    "fractal-a":      ( 48, 48),
+    "fractal-b":      ( 52, 48),
+    "splinter-a":     ( 56, 48),
+    "splinter-b":     ( 60, 48),
+    "ice-shard-a":    ( 64, 48),
+    "ice-shard-b":    ( 68, 48),
+    "enemy-bullet-a": ( 72, 48),
+    "enemy-bullet-b": ( 76, 48),
+    "spark-a":        ( 80, 48),
+    "spark-b":        ( 84, 48),
+    "spark-c":        ( 88, 48),
+    # y=56: UI wordmarks
+    "wordmark-artifact": (  0, 56),
 }
 # fmt: on
 
 SPR = {}  # name -> (u, v, w, h), filled by load_all()
+
+
+def blt_centered(name, x, y, flip_x=False, flip_y=False):
+    """Blit a sprite by name, centred on (x, y), with optional flips. Colour key 0."""
+    u, v, w, h = SPR[name]
+    pyxel.blt(
+        int(x) - w // 2,
+        int(y) - h // 2,
+        0,
+        u,
+        v,
+        -w if flip_x else w,
+        -h if flip_y else h,
+        0,
+    )
+
+
+def blt_directional(base, x, y, vx, vy):
+    """Blit a projectile sprite set (<base>-h/-v/-d) oriented along (vx, vy), centred on (x, y).
+    Sets are authored moving right / down / down-right."""
+    if vy == 0:
+        blt_centered(base + "-h", x, y, flip_x=vx < 0)
+    elif vx == 0:
+        blt_centered(base + "-v", x, y, flip_y=vy < 0)
+    else:
+        blt_centered(base + "-d", x, y, flip_x=vx < 0, flip_y=vy < 0)
+
+
+def frame(names, period=4):
+    """Pick an animation frame name from a tuple by the global frame counter."""
+    return names[(pyxel.frame_count // period) % len(names)]
 
 
 def _nearest(rgb):

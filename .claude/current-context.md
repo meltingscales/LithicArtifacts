@@ -16,6 +16,8 @@ See `README.md` and `DESIGN-DECISIONS.md` for locked decisions.
 - Pyxel 2.9.6 (240×160). Palette is PICO-8 (`sprites.PALETTE`), set explicitly at init — Pyxel's default palette is different and every doc/sprite assumes PICO-8 indices
 - Art pipeline: `assets/sprites/*.ppm` (LLM-authored text, PICO-8 RGB) → `sprites.load_all()` writes PNGs to gitignored `assets/img/` and loads bank 0 per `sprites.SHEET`; code uses `SPR[name]`. Use Fable-class models to author PPMs. Tiles are one set (5=fill,6=edge) palette-swapped per biome in `draw()`; variant picked by exposure: top > side (flipped for right) > fill
 - Demos: `just demo <name>` runs `demos/<name>.py`; `main.Game` is importable (guarded by `__main__`, call `.run()`), so demos subclass it with a custom `_full_reset` scene and override the `_left/_right/...` input wrappers for scripted input
+- Projectiles/particles are sprites: `sprites.blt_directional(base, ...)` picks `<base>-h/-v/-d` and flips by velocity; `blt_centered` + `frame()` for pulsing 3x3 bullets; particles use `spark-a/b/c` pal-swapped to their colour
+- ARTIFACT warning: `Game.warn_pickup` = nearest uncollected pickup from 0.5 screens above to 1.5 below; first sighting sets `warn_timer` (fullscreen CICADAMATA-style alert, wordmark sprite scaled 2x); right-edge indicator persists while in range
 - Feel: `COYOTE_FRAMES` / `JUMP_BUFFER` in constants.py; `Game._burst` particles, `Game.shake`, `Enemy.flash` for hit feedback
 - `just run` to launch, `just fmt` to format (uses `uvx ruff`)
 

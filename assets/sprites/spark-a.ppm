@@ -1,0 +1,7 @@
+P3
+# spark-a: Particle frame A (fresh): 3x3 plus. White; palette-swapped per particle.
+3 3
+255
+0 0 0  255 241 232  0 0 0
+255 241 232  255 241 232  255 241 232
+0 0 0  255 241 232  0 0 0

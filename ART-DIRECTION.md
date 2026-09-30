@@ -60,8 +60,8 @@ player things lean yellow/orange, world tiles lean gray**.
 | Flyer | 8 × 8 px | Compact; wings implied by frame animation |
 | ShootyFlier | 16 × 8 px | Wider than a tile; protrudes to show it shoots |
 | Artifact pickup | 8 × 8 px | Glyph on pedestal; pedestal is a standard tile |
-| Enemy bullet | 2 × 2 px | |
-| Player bullet | 2 × 2 px | |
+| Enemy bullet | 3 × 3 px | 2-frame pulse |
+| Player bullet | 7 × 3 px | Orange tracer; h/v/d variants, flipped by direction |
 
 **Current state:** player, enemies, tiles, pickups and artifact icons are all sprites,
 authored as text PPMs in `assets/sprites/` (see its README for the pipeline and rules).
@@ -166,3 +166,4 @@ Text is Pyxel's built-in 4×6 px font.
 | Reverent weirdness | Caves of Qud | Ancient ruins biome; artifact lore |
 | Vertical momentum and dread | Downwell | Camera bias downward; falling into the unknown |
 | Breaking things feels good | Noita | Artifact combos that visibly escalate the world |
+| Loud, legible alerts | CICADAMATA | Vector-clean flashing overlays (red/white), block-caps wordmarks, thin frames and hazard bands; the ARTIFACT warning |

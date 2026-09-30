@@ -20,6 +20,7 @@ class WorldPickup:
         self.y            = float(y)
         self.artifact_cls = artifact_cls
         self.collected    = False
+        self.warned       = False   # ARTIFACT warning already shown for this pickup
         # fmt: on
 
     # fmt: off
