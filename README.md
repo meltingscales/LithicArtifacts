@@ -28,7 +28,7 @@ When you find a combination the game considers aberrant, it tells you. Then it t
 
 - **GBA resolution: 240×160**
 - Chunky tile-based rendering, limited palette
-- ASCII/symbol-forward — characters and creatures are glyphs, not sprites
+- Tiny hand-placed sprites (8x8 / 8x16), authored as text PPMs by an LLM
 - Influenced by the original Rogue's austerity
 
 ## Design Pillars
@@ -51,7 +51,9 @@ enemies.py:   Enemy classes (Crawler, Flyer, ShootyFlier, EnemyBullet)
 synergies.py: Synergy detection — adjacency checks and body-panel line registry
 worldgen.py:  Procedural section generation, Perlin noise, BFS traversability
 constants.py: Shared tunable constants (physics, combat, worldgen, seeds)
-assets/:      Asset generation scripts and audio/image assets
+sprites.py:   PPM -> PNG -> image bank pipeline; SHEET layout and SPR lookup
+assets/sprites/: LLM-authored P3 PPM sprites (see its README)
+assets/audio/:   Audio assets and generator script
 ```
 
 ## Scope
@@ -75,7 +77,7 @@ assets/:      Asset generation scripts and audio/image assets
 **Pyxel** (Python)
 
 - Native 240×160 canvas, scaled to window
-- 16-color palette — set to PICO-8 at init (`PALETTE` in `main.py`); Pyxel's own default is different
+- 16-color palette — set to PICO-8 at init (`sprites.PALETTE`); Pyxel's own default is different
 - Built-in tilemap and sprite editor (`.pyxres` resource files)
 - `pip install pyxel`
 

@@ -10,6 +10,8 @@ from pickups   import MissileCanister, WorldPickup
 from player    import Player, P_W, P_H
 from synergies   import all_synergy_pairs, fractal_wallbreaker_active, rocketfin_ice_active
 from world       import World
+import sprites
+from sprites     import SPR, PALETTE
 from constants import (
     SCREEN_W, SCREEN_H, TILE, COLS,
     PREAMBLE_ROWS, SECTION_H, BIOME_SECTION_LEN,
@@ -23,13 +25,6 @@ from constants import (
 # fmt: on
 
 # fmt: off
-# PICO-8 palette. Every doc, palette-index constant and sprite in this repo was
-# authored against it, but Pyxel ships a different default palette, so it is set
-# explicitly at init (also makes Image.load snap PNG colours to the right indices).
-PALETTE = [
-    0x000000, 0x1D2B53, 0x7E2553, 0x008751, 0xAB5236, 0x5F574F, 0xC2C3C7, 0xFFF1E8,
-    0xFF004D, 0xFFA300, 0xFFEC27, 0x00E436, 0x29ADFF, 0x83769C, 0xFF77A8, 0xFFCCAA,
-]
 WHITE      = 7
 RED        = 8
 BLACK      = 0
@@ -107,26 +102,7 @@ class Game:
             quit_key=pyxel.KEY_NONE,
         )
         pyxel.colors.from_list(PALETTE)
-        # fmt: off
-        # Sprites — bank 0 layout:
-        #   y=0:  (0,0) 16×8 flyer | (16,0) VampiricCape | (24,0) MissileCanister
-        #         (32,0) tile-biomech-center | (40,0) tile-biomech-platform
-        #   y=8..31: assets/img/player-c.png (104×24 sheet)
-        #   y=8:  player head tiles (8×8 each, x = frame*8):
-        #         0=idle, 1=walk-A, 2=walk-B, 3=jump-tuck, 4=jump-straight
-        #         5-8=spin cycle (0°/90°/180°/270°), 9=wallhang
-        #   y=16: player body tiles (same x layout as y=8)
-        #   y=24: aim body tiles (8×8, x = dir*8):
-        #         0=R, 1=UR, 2=U, 3=UL, 4=L, 5=DL, 6=D, 7=DR
-        #         8=hang-away, 9=hang-up, 10=hang-down, 11=hang-diag-up, 12=hang-diag-down
-        #         (hang tiles authored for hang_wall=1 / wall-on-right; mirrored via flip)
-        # fmt: on
-        pyxel.images[0].load(0, 0, "assets/img/flyer.png")
-        pyxel.images[0].load(16, 0, "assets/img/VampiricCape.png")
-        pyxel.images[0].load(24, 0, "assets/img/missilecanister.png")
-        pyxel.images[0].load(32, 0, "assets/img/tile-biomech-center.png")
-        pyxel.images[0].load(40, 0, "assets/img/tile-biomech-platform.png")
-        pyxel.images[0].load(0, 8, "assets/img/player-c.png")
+        sprites.load_all()
         # Sound 0: flyer spawn buzz (short descending triangle)
         pyxel.sounds[0].set("e3d3c3", "t", "543", "nnn", 10)
         # Sound 1: flyer shoot (noise burst with fadeout)
@@ -281,13 +257,9 @@ class Game:
         pyxel.rectb(px0, py0, pw, ph, YELLOW)
         pyxel.text(px0 + 4, py0 + 5, "ARTIFACT FOUND", ORANGE)
         pyxel.line(px0 + 1, py0 + 14, px0 + pw - 2, py0 + 14, DARK_GRAY)
-        spr = cls.sprite
-        if spr:
-            img, sx, sy2, w, h, ck = spr
-            pyxel.blt(px0 + 4, py0 + 18, img, sx, sy2, w, h, ck)
-            pyxel.text(px0 + 14, py0 + 20, cls.name, YELLOW)
-        else:
-            pyxel.text(px0 + 4, py0 + 20, f"{cls.glyph}  {cls.name}", YELLOW)
+        u, v, w, h = SPR[cls.sprite]
+        pyxel.blt(px0 + 4, py0 + 18, 0, u, v, w, h, 0)
+        pyxel.text(px0 + 14, py0 + 20, cls.name, YELLOW)
         for i, ln in enumerate(self._wrap(cls.description, 46)[:3]):
             pyxel.text(px0 + 4, py0 + 34 + i * 10, ln, LIGHT_GRAY)
         pyxel.text(px0 + 4, py0 + ph - 19, "Z / X  dismiss", DARK_GRAY)
@@ -1468,16 +1440,18 @@ class Game:
                     sy = int(row * TILE - cam)
                     bidx = biome_for_row(row)
                     _, _, wf, wb, cf, cb = _BIOMES[bidx]
+                    # Tiles are authored with 5=fill, 6=edge; swap to biome colours
                     if ttype == 2:  # cave rock
-                        pyxel.rect(sx, sy, TILE, TILE, cf)
-                        pyxel.rectb(sx, sy, TILE, TILE, cb)
-                    elif bidx == 0:  # Biomechanical Dungeon — sprite tiles
-                        is_platform = self.world.tiles.get((col, row - 1), 0) == 0
-                        spr_x = 40 if is_platform else 32
-                        pyxel.blt(sx, sy, 0, spr_x, 0, TILE, TILE, 0)
+                        pyxel.pal(DARK_GRAY, cf)
+                        pyxel.pal(LIGHT_GRAY, cb)
+                        u, v, _, _ = SPR["tile-rock"]
                     else:  # platform / side wall (type 1)
-                        pyxel.rect(sx, sy, TILE, TILE, wf)
-                        pyxel.rectb(sx, sy, TILE, TILE, wb)
+                        pyxel.pal(DARK_GRAY, wf)
+                        pyxel.pal(LIGHT_GRAY, wb)
+                        exposed = self.world.tiles.get((col, row - 1), 0) == 0
+                        u, v, _, _ = SPR["tile-top" if exposed else "tile-fill"]
+                    pyxel.blt(sx, sy, 0, u, v, TILE, TILE)
+        pyxel.pal()
 
         # Fractal Blaster background overlay (dithered, drawn above tiles but below entities)
         for a in self.player.artifacts:
@@ -1538,14 +1512,16 @@ class Game:
                 pyxel.blt(px, py + 8, 0, bx, 24, fw, 8, 0)
             else:
                 pyxel.blt(px, py + 8, 0, 72, 16, fw, 8, 0)
-        elif p.climbing:
-            pyxel.text(px + 2, py + 1, "@", YELLOW)
-            pyxel.text(px + 2, py + TILE + 1, "H", YELLOW)
+        elif p.climbing or p.burrowing:
+            fw = p.facing * 8
+            pyxel.blt(px, py, 0, 0, 8, fw, 8, 0)  # idle head
+            u, v, _, _ = SPR[
+                "player-c-climb-body" if p.climbing else "player-c-burrow-body"
+            ]
+            pyxel.blt(px, py + 8, 0, u, v, fw, 8, 0)
         elif p.crouching:
-            pyxel.text(px + 2, py + 1, "@", YELLOW)
-        elif p.burrowing:
-            pyxel.text(px + 2, py + 1, "@", YELLOW)
-            pyxel.text(px + 2, py + TILE + 1, "v", YELLOW)
+            u, v, _, _ = SPR["player-c-crouch"]
+            pyxel.blt(px, py, 0, u, v, p.facing * 8, 8, 0)
         else:
             fi = self._player_anim_frame(p)
             fx = fi * 8

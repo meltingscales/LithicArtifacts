@@ -4,6 +4,10 @@ default:
 run:
     uv run python main.py
 
+# Run a self-contained demo from demos/ (e.g. `just demo mechaspider`)
+demo NAME *ARGS="":
+    uv run python demos/{{NAME}}.py {{ARGS}}
+
 build:
     uv run pyinstaller lithic_artifacts.spec
 
@@ -46,21 +50,6 @@ pylint:
 #     just audio wavetable --pitch 440 --duration 0.5
 #     just audio noise --base-freq 55 --fm-ratio 3.5 --fm-index 6.0 --count 64
 
-# Generate audio candidates (32768 Hz mono WAV) → assets/candidates/audio/. For more help, see contents of `justfile`.
+# Generate audio candidates (32768 Hz mono WAV) → assets/candidates/audio/ (gitignored). For more help, see contents of `justfile`.
 audio MODE="both" *ARGS="":
     uv run python assets/generate-audio-datamosh.py --mode {{MODE}} {{ARGS}}
-
-# Extended help for `sprites`:
-#   MODE (positional): sample | noise | both  (default: both)
-#     sample  — crop 8×8 patches from art-direction/ refs, snap to Pyxel palette
-#     noise   — Perlin noise synthesis, then quantize to palette
-#   Flags: --count N (per mode, default 32)  --seed N (default 42)
-#          --scale F (noise zoom, default 4.0)  --octaves N (default 4)
-#   Examples:
-#     just sprites sample --count 64
-#     just sprites noise --scale 8.0 --octaves 6
-#     just sprites both --seed 7 --count 128
-
-# Generate 8×8 palette-exact sprite candidates → assets/candidates/img/. For more help, see contents of `justfile`.
-sprites MODE="both" *ARGS="":
-    uv run python assets/generate-8x8-datamosh.py --mode {{MODE}} {{ARGS}}

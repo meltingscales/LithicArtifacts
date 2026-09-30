@@ -10,6 +10,8 @@ import random
 
 import pyxel
 
+from sprites import SPR
+
 # fmt: off
 from constants import (
     TILE as _TILE, SCREEN_H as _SCREEN_H,
@@ -90,11 +92,38 @@ class Enemy:
     def update(self, world, player, enemy_bullets):
         pass
 
+    # Sprite frame names (2-frame cycle) or None to draw the glyph.
+    frames = None
+    # Palette indices that turn white on hit-flash
+    flash_cols = (1, 2, 3, 5, 13)
+
     def draw(self, cam):
         sy = int(self.y - cam)
-        if -_TILE <= sy < _SCREEN_H:
+        if not (-_TILE <= sy < _SCREEN_H):
+            return
+        if self.frames is None:
             col = 7 if self.flash > 0 else 12 if self.frozen_timer > 0 else self.color
             pyxel.text(int(self.x) + 2, sy + 1, self.glyph, col)
+            return
+        u, v, w, h = SPR[self.frames[(pyxel.frame_count // 8) % len(self.frames)]]
+        if self.flash > 0:
+            for c in self.flash_cols:
+                pyxel.pal(c, 7)
+        self._pal_extra()
+        # Sprite is centred over the 8x8 hitbox; negative width flips to face left
+        pyxel.blt(
+            int(self.x) - (w - _TILE) // 2, sy, 0, u, v, w if self.vx >= 0 else -w, h, 0
+        )
+        pyxel.pal()
+        if self.frozen_timer > 0:
+            pyxel.dither(0.5)
+            pyxel.rect(
+                int(self.x) - (w - _TILE) // 2, sy, w, h, 1
+            )  # navy dither overlay
+            pyxel.dither(1.0)
+
+    def _pal_extra(self):
+        """Hook for subclasses to add palette swaps before the sprite blit."""
 
 
 # ---------------------------------------------------------------------------
@@ -106,6 +135,7 @@ class Crawler(Enemy):
     """Walks back and forth on platforms; turns at walls and ledge edges."""
 
     glyph = "c"
+    frames = ("crawler-a", "crawler-b")
 
     def __init__(self, x, y):
         super().__init__(x, y, hp=2, damage=1)
@@ -167,13 +197,7 @@ class Flyer(Enemy):
     """Drifts toward the player horizontally with a sinusoidal vertical bob."""
 
     glyph = "f"
-    # Sprite sheet coords in image bank 0: 16×8 at (0, 0)
-    # fmt: off
-    _SPR_U = 0
-    _SPR_V = 0
-    _SPR_W = 16   # positive = face right, negate to face left
-    _SPR_H = 8
-    # fmt: on
+    frames = ("flyer-a", "flyer-b")
 
     def __init__(self, x, y):
         super().__init__(x, y, hp=3, damage=1)
@@ -194,25 +218,6 @@ class Flyer(Enemy):
             if any(world.solid(lc, r) for r in rows):
                 self.x = float((lc + 1) * _TILE)
                 self.vx = -self.vx
-
-    def draw(self, cam):
-        sy = int(self.y - cam)
-        if -_TILE <= sy < _SCREEN_H:
-            # Flip horizontally when moving left; sprite is 16×8, centred over 8×8 hitbox
-            w = self._SPR_W if self.vx >= 0 else -self._SPR_W
-            if self.flash > 0:
-                for c in (1, 5, 13):
-                    pyxel.pal(c, 7)
-            pyxel.blt(
-                int(self.x) - 4, sy, 0, self._SPR_U, self._SPR_V, w, self._SPR_H, 0
-            )
-            pyxel.pal()
-            if self.frozen_timer > 0:
-                pyxel.dither(0.5)
-                pyxel.rect(
-                    int(self.x) - 4, sy, 16, self._SPR_H, 1
-                )  # navy dither overlay
-                pyxel.dither(1.0)
 
     def update(self, world, player, enemy_bullets):
         self.t += 1
@@ -241,10 +246,16 @@ class ShootyFlier(Flyer):
     """Flyer that periodically fires at the player when within range."""
 
     glyph = "F"
+    frames = ("shooty-flier-a", "shooty-flier-b")
 
     def __init__(self, x, y):
         super().__init__(x, y)
         self.shoot_cd = random.randint(30, _SHOOT_INTERVAL)
+
+    def _pal_extra(self):
+        # Tell: gun-arm glows orange just before firing
+        if self.shoot_cd < 20 and self.flash == 0:
+            pyxel.pal(8, 9)
 
     def update(self, world, player, enemy_bullets):
         super().update(world, player, enemy_bullets)

@@ -1,5 +1,6 @@
 # Done
 
+- Art pipeline rebuilt: all AI-generated images, prompts and the localai/datamosh tooling removed; sprites are now LLM-authored P3 PPMs in `assets/sprites/` converted to PNG and loaded by `sprites.py` at startup; new sprites for crawler, flyer, shooty flier (2 frames each + fire tell), biome-swapped tile set (fill/top/rock), missile canister, 7 artifact icons, player crouch/climb/burrow; player neck row filled
 - Polish pass: PICO-8 palette set explicitly at init (Pyxel default differed from every doc/asset, tinting grays blue and snapping PNG grays to brown); player PPMs merged into `assets/img/player-c.png` sheet and `spriteutil.py` removed; coyote time + jump buffering; enemy hit-flash, death/hurt particle bursts, landing dust, screen shake on damage; three duplicated kill blocks folded into `_damage_enemy`
 - Floor counter: `B01`–`BXX` displayed top-right of HUD; derived from player y vs PREAMBLE_ROWS + SECTION_H
 - Bug: ESC closed game AND menus — disabled pyxel default ESC quit (`quit_key=KEY_NONE`); debug menu now closes with F1/B/Start only; ESC reserved for pause menu cancel/close

@@ -13,8 +13,8 @@ See `README.md` and `DESIGN-DECISIONS.md` for locked decisions.
 ## Tech stack
 
 - Python, managed by `uv`
-- Pyxel 2.9.6 (240×160). Palette is PICO-8, set explicitly with `pyxel.colors.from_list(PALETTE)` in `main.py` — Pyxel's default palette is different and every doc/sprite assumes PICO-8 indices
-- Player sprites: single sheet `assets/img/player-c.png` (104×24) loaded at image bank 0, y=8; rows = head / body / aim-body. Author art as palette-exact PNG (never JPEG — lossy edges break palette snapping)
+- Pyxel 2.9.6 (240×160). Palette is PICO-8 (`sprites.PALETTE`), set explicitly at init — Pyxel's default palette is different and every doc/sprite assumes PICO-8 indices
+- Art pipeline: `assets/sprites/*.ppm` (LLM-authored text, PICO-8 RGB) → `sprites.load_all()` writes PNGs to gitignored `assets/img/` and loads bank 0 per `sprites.SHEET`; code uses `SPR[name]`. Use Fable-class models to author PPMs. Tiles are one set (5=fill,6=edge) palette-swapped per biome in `draw()`
 - Feel: `COYOTE_FRAMES` / `JUMP_BUFFER` in constants.py; `Game._burst` particles, `Game.shake`, `Enemy.flash` for hit feedback
 - `just run` to launch, `just fmt` to format (uses `uvx ruff`)
 

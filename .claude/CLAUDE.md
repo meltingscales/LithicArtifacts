@@ -35,7 +35,9 @@ These are not documented intentionally. Keep it as brief as possible so the play
 
 ### Art
 
-- Based off of `./ART-DIRECTION.md` and the pixel art that doesn't yet exist, generate a series of prompts to generate different assets, for a tool like https://retrodiffusion.ai/, inside the folder `./art-direction-prompts/**.md`. 
+- Sprites are LLM-authored P3 PPM text files in `assets/sprites/`, loaded as PNG at startup by `sprites.py`. Read `assets/sprites/README.md` first. No image-generation models, no upscale/downscale pipeline.
+- **Use Claude Fable (or a comparably capable model) to author or edit PPMs.** Weaker models lose row widths and palette roles.
+- Prompt: "Based on `./ART-DIRECTION.md` and `assets/sprites/README.md`, design PPMs for the assets that are still missing or crude, add them to `sprites.SHEET`, and wire them in."
 
 ### Caveman mode
 

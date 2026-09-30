@@ -1,5 +1,7 @@
 import pyxel
 
+from sprites import SPR
+
 # fmt: off
 from constants import TILE, SCREEN_H
 # fmt: on
@@ -33,12 +35,8 @@ class WorldPickup:
             return
         col = YELLOW if (pyxel.frame_count // 8) % 2 else ORANGE
         pyxel.rectb(int(self.x), sy, TILE, TILE, col)
-        spr = self.artifact_cls.sprite
-        if spr:
-            img, sx, sy2, w, h, ck = spr
-            pyxel.blt(int(self.x), sy, img, sx, sy2, w, h, ck)
-        else:
-            pyxel.text(int(self.x) + 2, sy + 1, self.artifact_cls.glyph, YELLOW)
+        u, v, w, h = SPR[self.artifact_cls.sprite]
+        pyxel.blt(int(self.x), sy, 0, u, v, w, h, 0)
 
 
 class MissileCanister:
@@ -77,4 +75,5 @@ class MissileCanister:
             return
         if self.timer < self.BLINK_START and (self.timer // self.BLINK_RATE) % 2 == 1:
             return
-        pyxel.blt(int(self.x), sy, 0, 24, 0, 8, 8, 0)
+        u, v, w, h = SPR["missile-canister"]
+        pyxel.blt(int(self.x), sy, 0, u, v, w, h, 0)

@@ -16,7 +16,7 @@ changing as artifacts accumulate on their body.
 | Resolution | 240 × 160 px (GBA native) |
 | Tile size | 8 × 8 px |
 | Grid | 30 × 20 tiles |
-| Palette | PICO-8 16-color (set via `pyxel.colors.from_list` in `main.py`; NOT Pyxel's default) |
+| Palette | PICO-8 16-color (`sprites.PALETTE`, applied at init; NOT Pyxel's default) |
 | Scale | Integer-scaled up for display |
 
 ---
@@ -63,9 +63,9 @@ player things lean yellow/orange, world tiles lean gray**.
 | Enemy bullet | 2 × 2 px | |
 | Player bullet | 2 × 2 px | |
 
-**Current state:** all entities render as Pyxel text glyphs (`@`, `W`, `c`, `f`, `F`).
-Pixel sprites are the roadmap target; glyph rendering is a placeholder.
-The sprite sheet grid is 8 × 8 px cells regardless.
+**Current state:** player, enemies, tiles, pickups and artifact icons are all sprites,
+authored as text PPMs in `assets/sprites/` (see its README for the pipeline and rules).
+The sprite sheet grid is 8 × 8 px cells.
 
 ---
 

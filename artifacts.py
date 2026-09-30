@@ -24,7 +24,7 @@ class Artifact:
     name        = ""
     glyph       = "?"
     description = ""
-    sprite      = None   # (img_bank, src_x, src_y, w, h, colkey) or None for glyph
+    sprite      = ""     # sprites.SPR key for the 8x8 pickup icon
     # fmt: on
 
     def on_frame(self, player, world, inputs):
@@ -51,6 +51,7 @@ class Wallbreaker(Artifact):
     # fmt: off
     name        = "Wallbreaker"
     glyph       = "W"
+    sprite      = "art-wallbreaker"
     description = "Your shots punch through solid walls, destroying tiles on impact."
     # fmt: on
 
@@ -65,6 +66,7 @@ class SpiralBorer(Artifact):
     # fmt: off
     name        = "Spiral Borer"
     glyph       = "B"
+    sprite      = "art-spiral-borer"
     description = ("Phase through solid floors without destroying them.")
     # fmt: on
 
@@ -101,6 +103,7 @@ class IceMissile(MissileArtifact):
     # fmt: off
     name        = "Ice Missiles"
     glyph       = "~"
+    sprite      = "art-ice-missile"
     description = ("Fires freezing missiles (hold RB+Z). "
                    "Limited ammo.")
     MAX_AMMO    = ICE_MISSILE_MAX_AMMO
@@ -117,6 +120,7 @@ class RocketFin(Artifact):
     # fmt: off
     name        = "Mysterious Rocket Fin"
     glyph       = "F"
+    sprite      = "art-rocket-fin"
     description = "It's humming and slowly rotating. What does this thing do?"
     # fmt: on
 
@@ -129,7 +133,7 @@ class VampiricCape(Artifact):
     name        = "Vampiric Cape"
     glyph       = "V"
     description = ("A spectral cape that drinks the life from fallen foes.")
-    sprite      = (0, 16, 0, 8, 8, 0)   # bank 0, (16,0), 8×8, colkey=black
+    sprite      = "art-vampiric-cape"
     # fmt: on
 
     # Pyxel color indices, oldest ghost → newest ghost (8 steps)
@@ -178,6 +182,7 @@ class MechaspiderLegs(Artifact):
     # fmt: off
     name        = "Mechaspider Legs"
     glyph       = "M"
+    sprite      = "art-mechaspider-legs"
     description = "Eight mechanical legs sprout from your sides. Walls become footholds."
     # fmt: on
 
@@ -394,6 +399,7 @@ class FractalBlaster(Artifact):
     # fmt: off
     name        = "Fractal Blaster"
     glyph       = "J"
+    sprite      = "art-fractal-blaster"
     description = "Shots pierce through enemies and weave through the air. Firing briefly tears a rift in space."
     BG_LIFETIME = 180
 
