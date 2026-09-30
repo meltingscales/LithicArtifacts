@@ -75,6 +75,7 @@ class Demo(Game):
         self.headless = headless
         self.frame = 0
         self.trace = []
+        self._prev = set()
         super().__init__()
         self.splash_timer = 0  # demos skip the startup splash
 
@@ -121,8 +122,10 @@ class Demo(Game):
     def _right(self):    return "right" in self._held()
     def _up(self):       return "up"    in self._held()
     def _down(self):     return "down"  in self._held()
-    def _jump(self):     return "jump"  in self._held()
-    def _jump_held(self):return "jump"  in self._held()
+    # Real keyboard mapping: Up is also a jump key (btnp), so emulate that here.
+    def _jump(self):     return ("jump" in self._held()) or ("up" in self._held() and "up" not in self._prev)
+    def _jump_held(self):return "jump"  in self._held() or "up" in self._held()
+    def _jump_btn(self): return "jump"  in self._held() and "jump" not in self._prev
     def _left_p(self):   return False
     def _right_p(self):  return False
     def _up_p(self):     return False
@@ -138,7 +141,9 @@ class Demo(Game):
     def update(self):
         p = self.player
         prev = (p.x, p.y, p.state, p.climbing)
+        up_pressed = "up" in self._held() and "up" not in self._prev
         super().update()
+        self._prev = set(self._held())
         self.frame += 1
         dy = p.y - prev[1]
         dx = p.x - prev[0]
@@ -150,6 +155,8 @@ class Demo(Game):
             note.append(f"state {prev[2]}->{p.state}")
         if p.climbing != prev[3]:
             note.append(f"climbing {prev[3]}->{p.climbing}")
+            if not p.climbing and up_pressed:
+                note.append("KICKED-OFF-BY-UP")
         if p.climbing and p.state == "hanging":
             note.append("CONFLICT climbing+hanging")
         if p.climbing and anchored == 0:
@@ -189,11 +196,12 @@ class Demo(Game):
         ]
         noanchor = [t for t in self.trace if "NO-ANCHOR" in t[9]]
         nowall = [t for t in self.trace if "NO-WALL" in t[9]]
+        kicked = [t for t in self.trace if "KICKED-OFF-BY-UP" in t[9]]
         climbing = [t for t in self.trace if t[4]]
         top_y = min((t[2] for t in climbing), default=None)
         print(
             f"--- {len(self.trace)} frames, climbing {len(climbing)}, snaps {len(snaps)}, "
-            f"climb+hang conflicts {len(conflicts)}, no-anchor {len(noanchor)}, no-wall {len(nowall)}, "
+            f"climb+hang conflicts {len(conflicts)}, no-anchor {len(noanchor)}, no-wall {len(nowall)}, kicked-off-by-up {len(kicked)}, "
             f"highest y while climbing {top_y} (wall top y={WALL_TOP * TILE}), final x={p.x:.1f} y={p.y:.1f} on_ground={p.on_ground} climbing={p.climbing}"
         )
 

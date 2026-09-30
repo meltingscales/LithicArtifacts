@@ -699,6 +699,15 @@ class Game:
             or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_B)
         )
 
+    def _jump_btn(self):
+        """Jump press from a dedicated jump button only (not Up/K), for states where
+        Up means climb."""
+        return (
+            pyxel.btnp(pyxel.KEY_SPACE)
+            or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_A)
+            or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_B)
+        )
+
     def _jump_held(self):
         return (
             pyxel.btn(pyxel.KEY_SPACE)
@@ -1105,9 +1114,10 @@ class Game:
                     p.ledge_cd = 6
                     p.vy = 0.5
         elif p.climbing:
-            # MechaspiderLegs wall-climb: 2D movement along wall, no gravity
+            # MechaspiderLegs wall-climb: 2D movement along wall, no gravity.
+            # Up means climb here, so only a dedicated jump button lets go.
             p.aim_locked = self._aim_lock()
-            if jump:
+            if self._jump_btn():
                 # Jump away from wall using stored wall side
                 wall_side = next(
                     (

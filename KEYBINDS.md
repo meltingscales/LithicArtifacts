@@ -52,6 +52,15 @@ Phase through solid floors while crouching. Burrowing is a commitment — ends o
 |---|---|---|
 | Activate (while crouching) | C | Y |
 
+### Mechaspider Legs
+Press toward a wall while airborne to grip it. Up/Down climb, Left/Right only turn. Only a dedicated jump button lets go (Up and K do not, since Up means climb here).
+
+| Action | Keyboard | Gamepad |
+|---|---|---|
+| Grip wall | Hold toward wall in the air | Hold toward wall in the air |
+| Climb | Up / Down (k / j) | D-pad Up / Down |
+| Jump off | Space | A / B |
+
 ### Wallbreaker
 Passive. Your shots destroy solid tiles on impact. Without this artifact, bullets stop at walls but don't break them.
 
